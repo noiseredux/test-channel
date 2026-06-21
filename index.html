@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>The Notable Games Index</h1>
-            <p class="version-tag">Version 6.1.8</p>
+            <p class="version-tag">Version 6.1.9</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -51,7 +51,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby2KZXE3yMkELERKQD76nQsiY_4Y-nyxMQzYQ98hOEbz61G2XjkJJqSc77TWfkdiflJnA/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
 
         const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306];
         const PLATFORM_NAMES = { 75: 'Apple II', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'Famicom', 19: 'SNES', 58: 'S.Famicom', 4: 'N64', 21: 'GameCube', 5: 'Wii', 41: 'Wii U', 130: 'Switch', 508: 'Switch 2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: 'Atari 2600', 68: 'Coleco', 117: 'CDi', 78: 'Sega CD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'Vita', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'Satella' };
@@ -162,11 +162,30 @@
             'hudson soft',
             'hudson entertainment',
             'ape inc',
+            'tose',
+            'arzest',
+            'syn sophia',
+            'arika',
+            'ganbarion',
+            'genius sonority',
+            'paon',
+            'treasure',
+            'mistwalker',
+            'next level games',
+            'vanpool',
+            'good-feel',
+            'mercurysteam',
+            'koei tecmo',
+            'omega force',
+            'team ninja',
+            'platinumgames',
 
             // Sony lineage
             'sony',
             'csg imagesoft',
             'sony imagesoft',
+            'cbs electronics',
+            'cbs software',
             'psygnosis',
             'studio liverpool',
             'guerrilla games',
@@ -187,7 +206,24 @@
             'housemarque',
             'bluepoint games',
             'nixxes software',
-            'bungie'
+            'bungie',
+            'arrowhead',
+            'kojima productions',
+            'shift up',
+            'fromsoftware',
+            'sumo digital',
+            'ember lab',
+            'media.vision',
+            'supermassive games',
+            'quantic dream',
+            'clap hanz',
+            'thatgamecompany',
+            'novarama',
+            'relentless software',
+            'game republic',
+            'eurocom',
+            'ballistic moon',
+            'superbot entertainment'
         ];
         // v6.1.0: Activated at 1.5x. Nintendo/Sony affiliated titles are the editorial
         // focus of this index, and their IGDB engagement systematically underrepresents
@@ -219,6 +255,20 @@
         // tier-ordering guarantee from v6.1.6 holds — Namco can approach but not
         // tie or exceed core first-party in any head-to-head.
         const NAMCO_MULTIPLIER = 1.45;
+
+        // v6.1.9: Apple-specific boost, its own tier separate from Affiliated/Namco.
+        // Apple publishes very few games directly — mostly older Apple II/Mac
+        // bundled software plus the occasional Apple Arcade original — but given
+        // the site's platform lean, that thin catalog is still editorially
+        // noteworthy. RAC7 included as an Apple affiliate following Apple's
+        // acquisition of the studio. Deliberately publisher-name-based only, not
+        // an "Apple Arcade" keyword/storefront match — Arcade is a distribution
+        // channel most third-party indies land on without any Apple ownership
+        // stake, the same way being on PlayStation Network doesn't make a game
+        // Sony-affiliated. Set below Namco's 1.45x given Apple's much thinner
+        // direct publishing footprint relative to Nintendo/Sony's console catalogs.
+        const APPLE_PUBLISHERS = ['apple', 'rac7'];
+        const APPLE_MULTIPLIER = 1.25;
 
         // v6.1.5: Critical darling bump. Genuinely exceptional non-affiliated titles
         // (Metaphor: ReFantazio, Clair Obscur: Expedition 33) were getting buried
@@ -300,6 +350,11 @@
         function isNamcoTitle(game) {
             if (!game.publishers) return false;
             return game.publishers.some(pub => NAMCO_PUBLISHERS.some(n => pub.toLowerCase().includes(n)));
+        }
+
+        function isAppleTitle(game) {
+            if (!game.publishers) return false;
+            return game.publishers.some(pub => APPLE_PUBLISHERS.some(a => pub.toLowerCase().includes(a)));
         }
 
         function isAffiliatedPublisher(game) {
@@ -384,6 +439,12 @@
                 }
                 if (isNamcoTitle(game)) {
                     score *= NAMCO_MULTIPLIER;
+                }
+                // v6.1.9: Apple tier, same major-league exclusion logic as Affiliated
+                // (v6.1.4) — a hypothetical Apple-published sports title shouldn't
+                // stack a publisher-prestige boost on top of the sports correction.
+                if (isAppleTitle(game) && !isMajorLeagueTitle(game)) {
+                    score *= APPLE_MULTIPLIER;
                 }
 
                 game.final_score = score;
