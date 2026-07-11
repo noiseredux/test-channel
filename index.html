@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.0.5</p>
+            <p class="version-tag">Version 7.0.6</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -644,7 +644,8 @@
                 // v7.0.4: Nintendo franchise IP boost for sanctioned non-affiliated titles.
                 // Only fires when the game is NOT already getting the affiliated publisher
                 // boost — prevents double-boosting first-party Nintendo titles.
-                if (isNintendoIPTitle(game) && !isAffiliatedPublisher(game)) {
+                // Also excludes CDi platform titles which have their own dedicated boost.
+                if (isNintendoIPTitle(game) && !isAffiliatedPublisher(game) && !isCDiNintendoTitle(game)) {
                     score = Math.round(score * NINTENDO_IP_MULTIPLIER);
                 }
 
