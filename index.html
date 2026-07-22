@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 8.0 — Total Rating Edition</p>
+            <p class="version-tag">Version 8.1 — Confidence-Weighted Edition</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -46,12 +46,12 @@
         <div id="content"></div>
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
-            Ranked by IGDB's Total Rating — no custom hype logic applied.
+            Ranked by a confidence-weighted Total Rating — low review counts are pulled toward the year average.
         </footer>
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4Eu0nbJemVZb7uDvfdSQdEddKXwWGXufhaCWdcG89khKN-Q0-TZimRClmxL2lb9bGsQ/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
 
         const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35];
         const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG' };
@@ -61,6 +61,14 @@
         // Ranking is now a direct sort by IGDB's `total_rating` field — the composite
         // of IGDB user ratings (`rating`) and external critic scores (`aggregated_rating`).
         // This build exists purely as a baseline comparison against the hype-index build.
+        //
+        // v8.1: Ranking now uses `confidence_score`, computed server-side in the Apps
+        // Script backend as a Bayesian/weighted average of total_rating and
+        // total_rating_count. Games with few reviews get pulled toward the year's
+        // average rather than standing on a thin sample alone; games with a large
+        // review count land close to their raw total_rating. Raw total_rating and
+        // review count are still shown alongside it so the effect of the weighting
+        // is visible, not hidden.
 
         // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
         const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
@@ -84,8 +92,9 @@
             });
 
             filtered.forEach(game => {
-                // v8.0: score is simply IGDB's total_rating, untouched.
-                game.total_score = game.total_rating || 0;
+                // v8.1: score is the backend's confidence-weighted composite,
+                // not raw total_rating.
+                game.total_score = game.confidence_score || 0;
             });
 
             filtered = filtered.filter(game => game.total_score > 0);
@@ -111,7 +120,9 @@
                     <div class="game-info">
                         <div class="game-title">${game.name}</div>
                         <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
-                            Total Rating: <span class="engagement-value">${game.total_score.toFixed(1)}</span>
+                            Confidence Score: <span class="engagement-value">${game.total_score.toFixed(1)}</span>
+                            &nbsp;·&nbsp; Raw Rating: ${(game.total_rating || 0).toFixed(1)}
+                            &nbsp;·&nbsp; ${game.total_rating_count || 0} reviews
                         </div>
                         <div style="margin-top: 4px;">
                             ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}
