@@ -18,7 +18,6 @@
         header { background: linear-gradient(135deg, var(--ps-blue) 0%, #001a4d 100%); border-bottom: 4px solid var(--nin-red); padding: 3rem 1.5rem; text-align: center; }
         header h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 7vw, 4.2rem); color: #fff; line-height: 0.9; text-transform: uppercase; margin: 0; }
         .version-tag { font-size: 0.8rem; letter-spacing: 0.3em; text-transform: uppercase; color: #ffffff; opacity: 0.8; margin-top: 0.75rem; font-weight: 500; }
-        .test-banner { background: #fff3cd; color: #7a5b00; text-align: center; padding: 8px; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; border-bottom: 1px solid #f0d98a; }
         .controls { background: #e2e2ea; padding: 15px; display: flex; justify-content: center; align-items: center; gap: 15px; }
         .controls select { padding: 8px 20px; font-weight: 700; border: 2px solid var(--ps-blue); border-radius: 4px; color: var(--ps-blue); cursor: pointer; }
         .loading { text-align: center; padding: 80px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--ps-blue); }
@@ -40,7 +39,6 @@
             <h1>What Should Noiseredux Play?</h1>
             <p class="version-tag">Version 9.0 — Test Channel</p>
         </header>
-        <div class="test-banner">Raw IGDB hype only — no boosts or multipliers applied</div>
         <div class="controls">
             <label>Select Year:</label>
             <select id="yearSelect"></select>
@@ -48,7 +46,7 @@
         <div id="content"></div>
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
-            Test channel: unweighted hype index — same data pipeline, filtering, and platform scope as the main version, with every scoring boost removed.
+            Test channel: pure hype index (reviews + hypes) — same data pipeline, filtering, and platform scope as the main version, with all weighting and boosts removed.
         </footer>
     </div>
 
@@ -89,8 +87,8 @@
             });
 
             filtered.forEach(game => {
-                // v9.0: no multipliers — pure raw hype.
-                game.hype_score = ((game.reviews || 0) * 3) + (game.hypes || 0);
+                // v9.0: no multipliers, no weighting — pure raw hype.
+                game.hype_score = (game.reviews || 0) + (game.hypes || 0);
             });
 
             filtered = filtered.filter(game => game.hype_score > 0);
