@@ -88,7 +88,7 @@
 
             filtered.forEach(game => {
                 // v9.0: no multipliers, no weighting — pure raw hype.
-                game.hype_score = (game.reviews || 0) + (game.hypes || 0);
+                game.hype_score = (game.reviews || 0) + (game.hypes || 0) + (game.follows || 0);
             });
 
             filtered = filtered.filter(game => game.hype_score > 0);
