@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.2.6</p>
+            <p class="version-tag">Version 7.2.7</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -62,7 +62,6 @@
         const AFFILIATED_MULTIPLIER = 3.75;
         const AWARD_MULTIPLIER = 1.2;
 
-        // v7.2.4: Critical Darling boost.
         const CRITICAL_DARLING_REVIEWS_THRESHOLD = 100;
         const CRITICAL_DARLING_MULTIPLIER = 1.5;
 
@@ -70,14 +69,8 @@
         const PILLAR_MULTIPLIER = 1.5;
 
         const NINTENDO_IP_SLUGS = [
-            'mario',
-            'zelda',
-            'hyrule',
-            'metroid',
-            'kirby',
-            'donkey-kong',
-            'star-fox',
-            'starlink'
+            'mario', 'zelda', 'hyrule', 'metroid', 'kirby', 
+            'donkey-kong', 'star-fox', 'starlink'
         ];
         const NINTENDO_IP_MULTIPLIER = 5.0;
 
@@ -95,12 +88,8 @@
         const DIGITAL_PICTURES_MULTIPLIER = 22.0;
 
         const MAJOR_LEAGUE_TITLE_SLUGS = [
-            'madden',
-            'mlb-the-show',
-            'nhl-',
-            'nascar',
-            'ea-sports-college-football',
-            'pga-tour-2k'
+            'madden', 'mlb-the-show', 'nhl-', 'nascar', 
+            'ea-sports-college-football', 'pga-tour-2k'
         ];
         const MAJOR_LEAGUE_MULTIPLIER = 6.5;
 
@@ -131,7 +120,6 @@
             'factor 5', 'kitty group', 'technos japan', 'nicalis', 'flying tiger',
             'mecc', 'broderbund', 'sierra', 'infocom', 'epyx', 'sublogic', 'muse software', 'ubisoft'
         ];
-
         const AFFILIATED_DEVELOPERS = AFFILIATED_PUBLISHERS;
 
         const NAMCO_PUBLISHERS = ['namco', 'bandai namco'];
@@ -151,76 +139,71 @@
                 opt.textContent = year;
                 select.appendChild(opt);
             }
-            select.addEventListener('change', () => fetchGamesForYear(select.value));
-            fetchGamesForYear(select.value);
+            select.addEventListener('change', (e) => fetchGamesForYear(e.target.value));
+            fetchGamesForYear(select.value); // Will default to top item (2026) natively
         }
 
         function isMainstreamTitle(game) {
-            if (!game.slug) return false;
-            return MAINSTREAM_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
+            return game.slug && MAINSTREAM_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
         }
 
         function isMajorLeagueTitle(game) {
-            if (!game.slug) return false;
-            return MAJOR_LEAGUE_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
+            return game.slug && MAJOR_LEAGUE_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
         }
 
+        // Added typeof check to prevent fatal crashes if a game returns non-string array items
         function isNamcoTitle(game) {
-            const publisherMatch = game.publishers && game.publishers.some(pub =>
-                NAMCO_PUBLISHERS.some(n => pub.toLowerCase().includes(n))
+            const pubMatch = game.publishers && game.publishers.some(pub =>
+                typeof pub === 'string' && NAMCO_PUBLISHERS.some(n => pub.toLowerCase().includes(n))
             );
-            const developerMatch = game.developers && game.developers.some(dev =>
-                NAMCO_DEVELOPERS.some(n => dev.toLowerCase().includes(n))
+            const devMatch = game.developers && game.developers.some(dev =>
+                typeof dev === 'string' && NAMCO_DEVELOPERS.some(n => dev.toLowerCase().includes(n))
             );
-            return publisherMatch || developerMatch;
+            return pubMatch || devMatch;
         }
 
         function isAffiliatedPublisher(game) {
-            const publisherMatch = game.publishers && game.publishers.some(pub =>
-                AFFILIATED_PUBLISHERS.some(aff => pub.toLowerCase().includes(aff))
+            const pubMatch = game.publishers && game.publishers.some(pub =>
+                typeof pub === 'string' && AFFILIATED_PUBLISHERS.some(aff => pub.toLowerCase().includes(aff))
             );
-            const developerMatch = game.developers && game.developers.some(dev =>
-                AFFILIATED_DEVELOPERS.some(aff => dev.toLowerCase().includes(aff))
+            const devMatch = game.developers && game.developers.some(dev =>
+                typeof dev === 'string' && AFFILIATED_DEVELOPERS.some(aff => dev.toLowerCase().includes(aff))
             );
-            return publisherMatch || developerMatch;
-        }
-
-        function isCDiNintendoTitle(game) {
-            if (!game.platforms || !game.slug) return false;
-            return game.platforms.includes(CDI_PLATFORM_ID) &&
-                CDI_NINTENDO_SLUGS.some(s => game.slug.includes(s));
-        }
-
-        function isVirtualBoyTitle(game) {
-            if (!game.platforms) return false;
-            return game.platforms.includes(VB_PLATFORM_ID);
-        }
-
-        function isWonderSwanTitle(game) {
-            if (!game.platforms) return false;
-            return game.platforms.some(p => WS_PLATFORM_IDS.includes(p));
-        }
-
-        function isNintendoIPTitle(game) {
-            if (!game.slug) return false;
-            return NINTENDO_IP_SLUGS.some(s => game.slug.includes(s));
+            return pubMatch || devMatch;
         }
 
         function isPillarTitle(game) {
             const pubMatch = game.publishers && game.publishers.some(pub =>
-                PILLAR_PUBLISHERS.some(p => pub.toLowerCase().includes(p))
+                typeof pub === 'string' && PILLAR_PUBLISHERS.some(p => pub.toLowerCase().includes(p))
             );
             const devMatch = game.developers && game.developers.some(dev =>
-                PILLAR_PUBLISHERS.some(p => dev.toLowerCase().includes(dev))
+                typeof dev === 'string' && PILLAR_PUBLISHERS.some(p => dev.toLowerCase().includes(p))
             );
             return pubMatch || devMatch;
         }
 
         function isDigitalPicturesTitle(game) {
-            if (!game.developers) return false;
-            return game.developers.some(dev =>
-                DIGITAL_PICTURES_DEVELOPERS.some(d => dev.toLowerCase().includes(d))
+            return game.developers && game.developers.some(dev =>
+                typeof dev === 'string' && DIGITAL_PICTURES_DEVELOPERS.some(d => dev.toLowerCase().includes(d))
             );
+        }
+
+        function isCDiNintendoTitle(game) {
+            return game.platforms && game.slug && 
+                   game.platforms.includes(CDI_PLATFORM_ID) &&
+                   CDI_NINTENDO_SLUGS.some(s => game.slug.includes(s));
+        }
+
+        function isVirtualBoyTitle(game) {
+            return game.platforms && game.platforms.includes(VB_PLATFORM_ID);
+        }
+
+        function isWonderSwanTitle(game) {
+            return game.platforms && game.platforms.some(p => WS_PLATFORM_IDS.includes(p));
+        }
+
+        function isNintendoIPTitle(game) {
+            return game.slug && NINTENDO_IP_SLUGS.some(s => game.slug.includes(s));
         }
 
         function isCriticalDarling(game) {
@@ -234,8 +217,16 @@
             try {
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?year=${year}`);
                 const data = await response.json();
+                
+                if (!Array.isArray(data)) {
+                    content.innerHTML = `<div class="loading" style="color:var(--nin-red);">No data structure returned for ${year}.</div>`;
+                    return;
+                }
+                
                 displayGames(data);
             } catch (err) {
+                // If the app crashes, it will print exactly why to your F12 developer tools console
+                console.error(`Crash processing data for ${year}:`, err);
                 content.innerHTML = `<div class="loading" style="color:var(--nin-red);">Error loading data for ${year}.</div>`;
             }
         }
@@ -309,12 +300,11 @@
                 }
 
                 if (isDigitalPicturesTitle(game)) {
-                    score = Math.round(score * DIGITAL_PICTURES_DEVELOPERS_MULTIPLIER || DIGITAL_PICTURES_MULTIPLIER);
+                    score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER); // THIS is what was crashing.
                     hasMajorBoost = true;
                 }
 
                 // v7.2.4: Critical Darling boost.
-                // Applied only to unboosted games that hit the review threshold.
                 if (!hasMajorBoost && isCriticalDarling(game)) {
                     score = Math.round(score * CRITICAL_DARLING_MULTIPLIER);
                 }
