@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.2.9</p>
+            <p class="version-tag">Version 7.3.0</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -115,7 +115,7 @@
         }
         function isPillarTitle(game) {
             const pubMatch = Array.isArray(game.publishers) && game.publishers.some(pub => typeof pub === 'string' && PILLAR_PUBLISHERS.some(p => pub.toLowerCase().includes(p)));
-            const devMatch = Array.isArray(game.developers) && game.developers.some(dev => typeof dev === 'string' && PILLAR_PUBLISHERS.some(p => dev.toLowerCase().includes(p)));
+            const devMatch = Array.isArray(game.developers) && game.developers.some(dev => typeof dev === 'string' && PILLAR_PUBLISHERS.some(p => pub.toLowerCase().includes(p)));
             return pubMatch || devMatch;
         }
         function isDigitalPicturesTitle(game) { return Array.isArray(game.developers) && game.developers.some(dev => typeof dev === 'string' && DIGITAL_PICTURES_DEVELOPERS.some(d => dev.toLowerCase().includes(d))); }
@@ -125,6 +125,17 @@
         function isNintendoIPTitle(game) { return typeof game.slug === 'string' && NINTENDO_IP_SLUGS.some(s => game.slug.includes(s)); }
         function isCriticalDarling(game) { return (game.reviews || 0) >= CRITICAL_DARLING_REVIEWS_THRESHOLD; }
 
+        // --- Robust Image URL Formatter ---
+        function formatCoverUrl(url) {
+            if (!url) return 'https://images.igdb.com/igdb/image/upload/t_cover_small/nocover.png';
+            // Ensure proper absolute protocol
+            let formatted = url.startsWith('//') ? 'https:' + url : url;
+            // Upgrade low-res or thumbnail image tokens to cover view
+            formatted = formatted.replace('/t_thumb/', '/t_cover_small/');
+            formatted = formatted.replace('/t_micro/', '/t_cover_small/');
+            return formatted;
+        }
+
         async function fetchGamesForYear(year) {
             const content = document.getElementById('content');
             content.innerHTML = `<div class="loading">Loading ${year} Hype Index...</div>`;
@@ -133,19 +144,15 @@
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?year=${year}`);
                 let data = await response.json();
                 
-                // --- THE CRITICAL FIX: Robustly unpack GAS responses ---
-                // 1. If GAS double-stringified the JSON, parse it back into an object/array
                 if (typeof data === 'string') {
-                    try { data = JSON.parse(data); } catch(e) { console.warn("Failed to parse stringified response."); }
+                    try { data = JSON.parse(data); } catch(e) {}
                 }
 
                 let gamesArray = null;
 
-                // 2. Locate the actual array (whether it's direct or wrapped in an object like { data: [...] })
                 if (Array.isArray(data)) {
                     gamesArray = data;
                 } else if (data && typeof data === 'object') {
-                    // Search for common wrapper properties
                     const keysToCheck = ['data', 'games', 'items', 'result', 'body'];
                     for (const key of keysToCheck) {
                         if (Array.isArray(data[key])) {
@@ -153,7 +160,6 @@
                             break;
                         }
                     }
-                    // If still not found, check every property just in case
                     if (!gamesArray) {
                         for (const key in data) {
                             if (Array.isArray(data[key])) {
@@ -162,7 +168,6 @@
                             }
                         }
                     }
-                    // Handle a case where the body property itself is a stringified array
                     if (!gamesArray && typeof data.body === 'string') {
                         try {
                             const parsedBody = JSON.parse(data.body);
@@ -223,7 +228,7 @@
             let html = '<div class="games-grid">';
             filtered.forEach((game, index) => {
                 const rank = index + 1;
-                const coverUrl = game.coverUrl || 'https://images.igdb.com/igdb/image/upload/t_cover_small/nocover.png';
+                const coverUrl = formatCoverUrl(game.coverUrl);
                 const platformsText = Array.isArray(game.platforms) ? game.platforms.map(id => PLATFORM_NAMES[id] || id).join(' ') : '';
 
                 html += `
