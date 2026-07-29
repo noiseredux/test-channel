@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.2.7</p>
+            <p class="version-tag">Version 7.2.8</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -61,64 +61,26 @@
         const SPORT_MULTIPLIER = 2.5;
         const AFFILIATED_MULTIPLIER = 3.75;
         const AWARD_MULTIPLIER = 1.2;
-
         const CRITICAL_DARLING_REVIEWS_THRESHOLD = 100;
         const CRITICAL_DARLING_MULTIPLIER = 1.5;
-
         const PILLAR_PUBLISHERS = ['square', 'enix', 'capcom', 'konami'];
         const PILLAR_MULTIPLIER = 1.5;
-
-        const NINTENDO_IP_SLUGS = [
-            'mario', 'zelda', 'hyrule', 'metroid', 'kirby', 
-            'donkey-kong', 'star-fox', 'starlink'
-        ];
+        const NINTENDO_IP_SLUGS = ['mario', 'zelda', 'hyrule', 'metroid', 'kirby', 'donkey-kong', 'star-fox', 'starlink'];
         const NINTENDO_IP_MULTIPLIER = 5.0;
-
         const CDI_PLATFORM_ID = 117;
         const CDI_NINTENDO_SLUGS = ['zelda', 'mario', 'link'];
         const CDI_MULTIPLIER = 33.0;
-
         const VB_PLATFORM_ID = 87;
         const VB_MULTIPLIER = 4.0;
-
         const WS_PLATFORM_IDS = [57, 123];
         const WS_MULTIPLIER = 20.0;
-
         const DIGITAL_PICTURES_DEVELOPERS = ['digital pictures'];
         const DIGITAL_PICTURES_MULTIPLIER = 22.0;
-
-        const MAJOR_LEAGUE_TITLE_SLUGS = [
-            'madden', 'mlb-the-show', 'nhl-', 'nascar', 
-            'ea-sports-college-football', 'pga-tour-2k'
-        ];
+        const MAJOR_LEAGUE_TITLE_SLUGS = ['madden', 'mlb-the-show', 'nhl-', 'nascar', 'ea-sports-college-football', 'pga-tour-2k'];
         const MAJOR_LEAGUE_MULTIPLIER = 6.5;
 
         const AFFILIATED_PUBLISHERS = [
-            'nintendo', 'hal laboratory', 'hal america', 'game freak', 'monolith soft',
-            'retro studios', 'intelligent systems', 'creatures inc', 'nd cube', 'grezzo',
-            'camelot', 'alphadream', 'brownie brown', '1-up studio', 'jupiter corporation',
-            'ambrella', 'skip ltd', 'rare', 'rareware', 'hudson soft', 'hudson entertainment',
-            'ape inc', 'tose', 'arzest', 'syn sophia', 'arika', 'ganbarion', 'genius sonority',
-            'paon', 'treasure', 'mistwalker', 'next level games', 'vanpool', 'good-feel',
-            'mercurysteam', 'koei tecmo', 'omega force', 'team ninja', 'platinumgames',
-            'sony', 'csg imagesoft', 'sony imagesoft', 'apple', 'rac7', 'cbs electronics',
-            'cbs software', 'psygnosis', 'studio liverpool', 'guerrilla games', 'naughty dog',
-            'insomniac games', 'sucker punch', 'media molecule', 'evolution studios',
-            'polyphony digital', 'japan studio', 'team asobi', 'bend studio', 'san diego studio',
-            'zipper interactive', 'bigbig studios', 'ready at dawn', 'firesprite', 'housemarque',
-            'bluepoint games', 'nixxes software', 'bungie', 'arrowhead', 'kojima productions',
-            'shift up', 'fromsoftware', 'sumo digital', 'ember lab', 'media.vision',
-            'supermassive games', 'quantic dream', 'clap hanz', 'thatgamecompany', 'novarama',
-            'relentless software', 'game republic', 'eurocom', 'ballistic moon',
-            'superbot entertainment', 'malibu interactive', 'core design', 'ringler studios',
-            'absolute entertainment', 'imagineering', "traveller's tales", 'kogado',
-            'software creations', 'probe software', 'probe entertainment', 'acclaim studios london',
-            'acclaim cheltenham', 'sensible software', 'spidersoft', 'motivetime',
-            'outside directors', 'park place productions', 'sting entertainment', 'tiertex',
-            'teque', 'ocean software', 'ukiyotei', 'propaganda code', 'bits studios',
-            'bits studio', 'teeny weeny games', 'perfect 10 productions', 'perfect entertainment',
-            'factor 5', 'kitty group', 'technos japan', 'nicalis', 'flying tiger',
-            'mecc', 'broderbund', 'sierra', 'infocom', 'epyx', 'sublogic', 'muse software', 'ubisoft'
+            'nintendo', 'hal laboratory', 'hal america', 'game freak', 'monolith soft', 'retro studios', 'intelligent systems', 'creatures inc', 'nd cube', 'grezzo', 'camelot', 'alphadream', 'brownie brown', '1-up studio', 'jupiter corporation', 'ambrella', 'skip ltd', 'rare', 'rareware', 'hudson soft', 'hudson entertainment', 'ape inc', 'tose', 'arzest', 'syn sophia', 'arika', 'ganbarion', 'genius sonority', 'paon', 'treasure', 'mistwalker', 'next level games', 'vanpool', 'good-feel', 'mercurysteam', 'koei tecmo', 'omega force', 'team ninja', 'platinumgames', 'sony', 'csg imagesoft', 'sony imagesoft', 'apple', 'rac7', 'cbs electronics', 'cbs software', 'psygnosis', 'studio liverpool', 'guerrilla games', 'naughty dog', 'insomniac games', 'sucker punch', 'media molecule', 'evolution studios', 'polyphony digital', 'japan studio', 'team asobi', 'bend studio', 'san diego studio', 'zipper interactive', 'bigbig studios', 'ready at dawn', 'firesprite', 'housemarque', 'bluepoint games', 'nixxes software', 'bungie', 'arrowhead', 'kojima productions', 'shift up', 'fromsoftware', 'sumo digital', 'ember lab', 'media.vision', 'supermassive games', 'quantic dream', 'clap hanz', 'thatgamecompany', 'novarama', 'relentless software', 'game republic', 'eurocom', 'ballistic moon', 'superbot entertainment', 'malibu interactive', 'core design', 'ringler studios', 'absolute entertainment', 'imagineering', "traveller's tales", 'kogado', 'software creations', 'probe software', 'probe entertainment', 'acclaim studios london', 'acclaim cheltenham', 'sensible software', 'spidersoft', 'motivetime', 'outside directors', 'park place productions', 'sting entertainment', 'tiertex', 'teque', 'ocean software', 'ukiyotei', 'propaganda code', 'bits studios', 'bits studio', 'teeny weeny games', 'perfect 10 productions', 'perfect entertainment', 'factor 5', 'kitty group', 'technos japan', 'nicalis', 'flying tiger', 'mecc', 'broderbund', 'sierra', 'infocom', 'epyx', 'sublogic', 'muse software', 'ubisoft'
         ];
         const AFFILIATED_DEVELOPERS = AFFILIATED_PUBLISHERS;
 
@@ -140,70 +102,70 @@
                 select.appendChild(opt);
             }
             select.addEventListener('change', (e) => fetchGamesForYear(e.target.value));
-            fetchGamesForYear(select.value); // Will default to top item (2026) natively
+            fetchGamesForYear(select.value);
         }
 
+        // Extremely safe type-checked helpers to prevent UI crashes on messy IGDB data
         function isMainstreamTitle(game) {
-            return game.slug && MAINSTREAM_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
+            return typeof game.slug === 'string' && MAINSTREAM_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
         }
 
         function isMajorLeagueTitle(game) {
-            return game.slug && MAJOR_LEAGUE_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
+            return typeof game.slug === 'string' && MAJOR_LEAGUE_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
         }
 
-        // Added typeof check to prevent fatal crashes if a game returns non-string array items
         function isNamcoTitle(game) {
-            const pubMatch = game.publishers && game.publishers.some(pub =>
+            const pubMatch = Array.isArray(game.publishers) && game.publishers.some(pub =>
                 typeof pub === 'string' && NAMCO_PUBLISHERS.some(n => pub.toLowerCase().includes(n))
             );
-            const devMatch = game.developers && game.developers.some(dev =>
+            const devMatch = Array.isArray(game.developers) && game.developers.some(dev =>
                 typeof dev === 'string' && NAMCO_DEVELOPERS.some(n => dev.toLowerCase().includes(n))
             );
             return pubMatch || devMatch;
         }
 
         function isAffiliatedPublisher(game) {
-            const pubMatch = game.publishers && game.publishers.some(pub =>
+            const pubMatch = Array.isArray(game.publishers) && game.publishers.some(pub =>
                 typeof pub === 'string' && AFFILIATED_PUBLISHERS.some(aff => pub.toLowerCase().includes(aff))
             );
-            const devMatch = game.developers && game.developers.some(dev =>
+            const devMatch = Array.isArray(game.developers) && game.developers.some(dev =>
                 typeof dev === 'string' && AFFILIATED_DEVELOPERS.some(aff => dev.toLowerCase().includes(aff))
             );
             return pubMatch || devMatch;
         }
 
         function isPillarTitle(game) {
-            const pubMatch = game.publishers && game.publishers.some(pub =>
+            const pubMatch = Array.isArray(game.publishers) && game.publishers.some(pub =>
                 typeof pub === 'string' && PILLAR_PUBLISHERS.some(p => pub.toLowerCase().includes(p))
             );
-            const devMatch = game.developers && game.developers.some(dev =>
+            const devMatch = Array.isArray(game.developers) && game.developers.some(dev =>
                 typeof dev === 'string' && PILLAR_PUBLISHERS.some(p => dev.toLowerCase().includes(p))
             );
             return pubMatch || devMatch;
         }
 
         function isDigitalPicturesTitle(game) {
-            return game.developers && game.developers.some(dev =>
+            return Array.isArray(game.developers) && game.developers.some(dev =>
                 typeof dev === 'string' && DIGITAL_PICTURES_DEVELOPERS.some(d => dev.toLowerCase().includes(d))
             );
         }
 
         function isCDiNintendoTitle(game) {
-            return game.platforms && game.slug && 
+            return Array.isArray(game.platforms) && typeof game.slug === 'string' && 
                    game.platforms.includes(CDI_PLATFORM_ID) &&
                    CDI_NINTENDO_SLUGS.some(s => game.slug.includes(s));
         }
 
         function isVirtualBoyTitle(game) {
-            return game.platforms && game.platforms.includes(VB_PLATFORM_ID);
+            return Array.isArray(game.platforms) && game.platforms.includes(VB_PLATFORM_ID);
         }
 
         function isWonderSwanTitle(game) {
-            return game.platforms && game.platforms.some(p => WS_PLATFORM_IDS.includes(p));
+            return Array.isArray(game.platforms) && game.platforms.some(p => WS_PLATFORM_IDS.includes(p));
         }
 
         function isNintendoIPTitle(game) {
-            return game.slug && NINTENDO_IP_SLUGS.some(s => game.slug.includes(s));
+            return typeof game.slug === 'string' && NINTENDO_IP_SLUGS.some(s => game.slug.includes(s));
         }
 
         function isCriticalDarling(game) {
@@ -214,20 +176,29 @@
             const content = document.getElementById('content');
             content.innerHTML = `<div class="loading">Loading ${year} Hype Index...</div>`;
 
+            let data;
+            
+            // 1. DEDICATED FETCH BLOCK: Only network/API errors will trigger this catch
             try {
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?year=${year}`);
-                const data = await response.json();
-                
-                if (!Array.isArray(data)) {
-                    content.innerHTML = `<div class="loading" style="color:var(--nin-red);">No data structure returned for ${year}.</div>`;
-                    return;
-                }
-                
+                data = await response.json();
+            } catch (err) {
+                console.error(`Network Error fetching ${year}:`, err);
+                content.innerHTML = `<div class="loading" style="color:var(--nin-red);">Network Error loading data for ${year}.</div>`;
+                return;
+            }
+            
+            if (!Array.isArray(data)) {
+                content.innerHTML = `<div class="loading" style="color:var(--nin-red);">No valid data structure returned for ${year}.</div>`;
+                return;
+            }
+            
+            // 2. DEDICATED RENDER BLOCK: If the UI loop crashes, it isolates it here
+            try {
                 displayGames(data);
             } catch (err) {
-                // If the app crashes, it will print exactly why to your F12 developer tools console
-                console.error(`Crash processing data for ${year}:`, err);
-                content.innerHTML = `<div class="loading" style="color:var(--nin-red);">Error loading data for ${year}.</div>`;
+                console.error(`UI Render Crash processing ${year}:`, err);
+                content.innerHTML = `<div class="loading" style="color:var(--nin-red);">Error displaying games. Check console.</div>`;
             }
         }
 
@@ -235,17 +206,16 @@
             const content = document.getElementById('content');
 
             let filtered = gamesList.filter(game => {
-                const isCorrectPlatform = game.platforms && game.platforms.some(id => ALLOWED_PLATFORMS.includes(id));
-                const isBlacklistedCategory = game.category && BLACKLISTED_CATEGORIES.includes(game.category);
+                const isCorrectPlatform = Array.isArray(game.platforms) && game.platforms.some(id => ALLOWED_PLATFORMS.includes(id));
+                const isBlacklistedCategory = game.category !== undefined && BLACKLISTED_CATEGORIES.includes(game.category);
                 return isCorrectPlatform && !isBlacklistedCategory;
             });
 
             filtered.forEach(game => {
                 let score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0);
-
                 let hasMajorBoost = false;
 
-                if (game.genres && game.genres.includes(GENRE_SPORT_ID)) {
+                if (Array.isArray(game.genres) && game.genres.includes(GENRE_SPORT_ID)) {
                     score = Math.round(score * SPORT_MULTIPLIER);
                     hasMajorBoost = true;
                 }
@@ -270,7 +240,7 @@
                     hasMajorBoost = true;
                 }
 
-                if (game.keywords && game.keywords.some(k => k.toLowerCase().includes('award'))) {
+                if (Array.isArray(game.keywords) && game.keywords.some(k => typeof k === 'string' && k.toLowerCase().includes('award'))) {
                     score = Math.round(score * AWARD_MULTIPLIER);
                 }
 
@@ -300,11 +270,10 @@
                 }
 
                 if (isDigitalPicturesTitle(game)) {
-                    score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER); // THIS is what was crashing.
+                    score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER);
                     hasMajorBoost = true;
                 }
 
-                // v7.2.4: Critical Darling boost.
                 if (!hasMajorBoost && isCriticalDarling(game)) {
                     score = Math.round(score * CRITICAL_DARLING_MULTIPLIER);
                 }
@@ -323,21 +292,21 @@
             filtered.forEach((game, index) => {
                 const rank = index + 1;
                 const coverUrl = game.coverUrl || 'https://images.igdb.com/igdb/image/upload/t_cover_small/nocover.png';
-                const platformsText = (game.platforms || [])
-                    .map(id => PLATFORM_NAMES[id] || id)
-                    .join(' ');
+                const platformsText = Array.isArray(game.platforms) 
+                    ? game.platforms.map(id => PLATFORM_NAMES[id] || id).join(' ') 
+                    : '';
 
                 html += `
                     <a href="${game.url || '#'}" target="_blank" class="game-card">
                         <div class="game-rank">#${rank}</div>
                         <div class="game-image-container">
-                            <img src="${coverUrl}" class="game-image" alt="${game.name}" loading="lazy">
+                            <img src="${coverUrl}" class="game-image" alt="${game.name || 'Game'}" loading="lazy">
                         </div>
                         <div style="flex-grow: 1;">
                             <div style="margin-bottom: 4px;">
                                 <span class="platform-tag">${platformsText}</span>
                             </div>
-                            <div class="game-title">${game.name}</div>
+                            <div class="game-title">${game.name || 'Unknown Title'}</div>
                             <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px;">
                                 Hype Index: <span class="engagement-value">${game.calculatedScore}</span>
                             </div>
