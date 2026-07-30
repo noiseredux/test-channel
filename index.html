@@ -625,17 +625,20 @@
             );
         }
 
-        // v7.2.4: Returns true only if the game qualifies for the Critical Darling
+        // v7.2.5: Returns true only if the game qualifies for the Critical Darling
         // boost — 100+ reviews AND not already touched by any other multiplier in
-        // the system. This check is intentionally exhaustive: it mirrors every
-        // boost condition used elsewhere in the scoring pipeline so that "not
-        // already boosted" is evaluated the same way regardless of the order
-        // those boosts happen to run in.
+        // the system, EXCEPT the Award boost. The Award boost is deliberately
+        // excluded from this "already boosted" check because it's a loose,
+        // IGDB-keyword-tag-based signal (any keyword containing "award") rather
+        // than a structural data correction like the franchise/publisher/platform
+        // boosts. Award recognition and strong organic review counts are two
+        // independent signals of the same underlying fact — a genuinely great,
+        // unaffiliated game — so a game can receive both the Award boost and the
+        // Critical Darling boost. Every other multiplier still disqualifies.
         function isCriticalDarling(game) {
             if (!game.reviews || game.reviews < CRITICAL_DARLING_MIN_REVIEWS) return false;
 
             const hasSportBoost = game.genres && game.genres.includes(GENRE_SPORT_ID);
-            const hasAwardBoost = game.keywords && game.keywords.some(k => k.toLowerCase().includes('award'));
             const isUbisoftTitle = game.publishers && game.publishers.some(p => p.toLowerCase().includes('ubisoft'));
             const hasNintendoIPBoost = isNintendoIPTitle(game) &&
                 (!isAffiliatedPublisher(game) || isUbisoftTitle) &&
@@ -647,7 +650,6 @@
                 isMainstreamTitle(game) ||
                 isAffiliatedPublisher(game) ||
                 isNamcoTitle(game) ||
-                hasAwardBoost ||
                 isPillarTitle(game) ||
                 hasNintendoIPBoost ||
                 isCDiNintendoTitle(game) ||
