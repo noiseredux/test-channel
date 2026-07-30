@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.2.4</p>
+            <p class="version-tag">Version 7.3.0</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -534,14 +534,15 @@
         ];
         const MAINSTREAM_MULTIPLIER = 2.0;
 
-        // v7.2.4: Critical Darling boost. Any game with 100+ reviews has demonstrated
-        // real organic critical engagement on its own merits. This should only apply
-        // to games NOT already receiving a boost from one of the other multipliers —
-        // it exists to catch high-review-count titles that would otherwise pass through
-        // the scoring pipeline completely unadjusted (no genre, franchise, publisher,
-        // or platform correction of any kind applies to them). Deliberately the gentlest
-        // multiplier in the system, since a 100+ review count is itself already a strong,
-        // organic IGDB signal and doesn't need much help.
+        // v7.3.0: Critical Darling boost. Any game with 100+ combined user/critic
+        // reviews (IGDB total_rating_count) has demonstrated real organic engagement
+        // on its own merits, independent of publisher/platform/franchise affiliation.
+        // As of v7.3.0 this applies ACROSS THE BOARD and stacks with every other
+        // multiplier in the system — see the extended rationale on isCriticalDarling()
+        // below. Deliberately the gentlest multiplier in the system, since clearing
+        // 100 reviews is itself already a strong, organic signal and doesn't need
+        // much help — it's a bonus on top of the fanboy-lens baseline, not a
+        // substitute for it.
         const CRITICAL_DARLING_MIN_REVIEWS = 100;
         const CRITICAL_DARLING_MULTIPLIER = 1.25;
 
@@ -625,39 +626,25 @@
             );
         }
 
-        // v7.2.5: Returns true only if the game qualifies for the Critical Darling
-        // boost — 100+ reviews AND not already touched by any other multiplier in
-        // the system, EXCEPT the Award boost. The Award boost is deliberately
-        // excluded from this "already boosted" check because it's a loose,
-        // IGDB-keyword-tag-based signal (any keyword containing "award") rather
-        // than a structural data correction like the franchise/publisher/platform
-        // boosts. Award recognition and strong organic review counts are two
-        // independent signals of the same underlying fact — a genuinely great,
-        // unaffiliated game — so a game can receive both the Award boost and the
-        // Critical Darling boost. Every other multiplier still disqualifies.
+        // v7.3.0: MAJOR REVISION. Critical Darling is no longer an "only if nothing
+        // else boosted you" fallback — it now applies across the board, stacking
+        // with every other multiplier in the system. Philosophy shift: v7.2.3's
+        // full multiplier stack (affiliated/pillar/Namco/Nintendo-IP/CDi/VB/WS/
+        // Digital Pictures/etc) is treated as the correct baseline lens for
+        // "hype through a Sony/Nintendo/Apple fanboy's eyes," and Critical Darling
+        // is a separate, orthogonal axis layered on top: "did this ALSO prove
+        // itself with the crowd (100+ combined user/critic reviews)." Since it's
+        // a flat multiplier applied uniformly to every game that clears the
+        // threshold, it does not change relative ordering among games that all
+        // clear it — it only widens the gap between games that have broken
+        // through with reviewers/players and those that haven't, regardless of
+        // publisher/platform/franchise affiliation. Rollback note: if this
+        // distorts results (e.g. CDi Zelda titles never clearing 100 reviews and
+        // therefore never benefiting, while big well-reviewed titles stack an
+        // extra 1.25x on top of already-large multipliers), revert to the
+        // v7.2.5 exclusion-list version.
         function isCriticalDarling(game) {
-            if (!game.reviews || game.reviews < CRITICAL_DARLING_MIN_REVIEWS) return false;
-
-            const hasSportBoost = game.genres && game.genres.includes(GENRE_SPORT_ID);
-            const isUbisoftTitle = game.publishers && game.publishers.some(p => p.toLowerCase().includes('ubisoft'));
-            const hasNintendoIPBoost = isNintendoIPTitle(game) &&
-                (!isAffiliatedPublisher(game) || isUbisoftTitle) &&
-                !isCDiNintendoTitle(game);
-
-            const alreadyBoosted =
-                hasSportBoost ||
-                isMajorLeagueTitle(game) ||
-                isMainstreamTitle(game) ||
-                isAffiliatedPublisher(game) ||
-                isNamcoTitle(game) ||
-                isPillarTitle(game) ||
-                hasNintendoIPBoost ||
-                isCDiNintendoTitle(game) ||
-                isVirtualBoyTitle(game) ||
-                isWonderSwanTitle(game) ||
-                isDigitalPicturesTitle(game);
-
-            return !alreadyBoosted;
+            return !!game.reviews && game.reviews >= CRITICAL_DARLING_MIN_REVIEWS;
         }
 
         function displayGames(gamesList) {
