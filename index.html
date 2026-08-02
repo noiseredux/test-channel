@@ -46,7 +46,7 @@
         <div id="content"></div>
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by RAWG (rawg.io) <br>
-            Ranked by a confidence-weighted blend of RAWG's <code>rating</code> and <code>ratings_count</code> — thin samples get pulled toward the year average. Unreleased and unrated (0 ratings) games are excluded.
+            Ranked by a confidence-weighted blend of RAWG's <code>rating</code> and <code>ratings_count</code> — thin samples get pulled toward the year average. Unreleased and unrated (0 ratings) games are excluded, along with flagged tags and itch.io storefront listings.
         </footer>
     </div>
 
@@ -184,11 +184,22 @@
             { key: 'dreamcast',           abbr: 'DC' },
         ];
 
+        // v4: Storefronts to exclude entirely via RAWG's native `exclude_stores`
+        // filter (a real server-side param — see fetchExcludedStoreIds below).
+        // itch.io hosts a huge volume of NSFW/hentai indie content, so this
+        // is a much stronger and more reliable dragnet than tag-matching:
+        // it doesn't depend on a game being tagged consistently or completely,
+        // it just removes anything sold through that storefront, full stop.
+        // Tradeoff: this also excludes any legitimate, non-adult games that
+        // happen to be itch.io-exclusive.
+        const EXCLUDED_STORE_KEYWORDS = ['itch'];
+
         // IGDB category blacklist has no direct RAWG equivalent field; RAWG's
         // closest lever is the `exclude_additions` query param (DLC/expansions/
         // editions), applied server-side below.
 
         let allowedPlatformMap = null; // Map<rawgPlatformId, abbrLabel>
+        let excludedStoreIds = null;   // number[]
 
         async function fetchAllPlatforms() {
             const map = new Map();
@@ -209,6 +220,29 @@
                 url = data.next;
             }
             return map;
+        }
+
+        async function fetchExcludedStoreIds() {
+            const ids = [];
+            let url = `${RAWG_BASE}/stores?key=${RAWG_API_KEY}&page_size=50`;
+            let guard = 0;
+            while (url && guard < 5) {
+                guard++;
+                const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error(`RAWG /stores request failed: HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                (data.results || []).forEach(s => {
+                    const nameLower = (s.name || '').toLowerCase();
+                    const slugLower = (s.slug || '').toLowerCase();
+                    if (EXCLUDED_STORE_KEYWORDS.some(k => nameLower.includes(k) || slugLower.includes(k))) {
+                        ids.push(s.id);
+                    }
+                });
+                url = data.next;
+            }
+            return ids;
         }
 
         function populateYearDropdown() {
@@ -240,6 +274,9 @@
                 exclude_additions: 'true',
                 page_size: '40'
             });
+            if (excludedStoreIds && excludedStoreIds.length) {
+                params.set('exclude_stores', excludedStoreIds.join(','));
+            }
 
             let url = `${RAWG_BASE}/games?${params.toString()}`;
             const games = [];
@@ -374,6 +411,9 @@
             try {
                 if (!allowedPlatformMap) {
                     allowedPlatformMap = await fetchAllPlatforms();
+                }
+                if (!excludedStoreIds) {
+                    excludedStoreIds = await fetchExcludedStoreIds();
                 }
                 const games = await fetchGamesForYear(year);
                 displayGames(games);
