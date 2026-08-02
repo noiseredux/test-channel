@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>What Should Noiseredux Play?</title>
+    <title>What Should Noiseredux Play? (RAWG Edition)</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />
     <style>
         :root {
@@ -25,7 +25,7 @@
         .game-card { background: white; border: 1px solid #dcdce8; border-radius: 8px; display: flex; align-items: center; padding: 14px; gap: 20px; text-decoration: none; color: inherit; transition: all 0.2s ease; }
         .game-card:hover { transform: translateX(8px); border-color: var(--ps-blue-light); }
         .game-rank { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--ps-blue); min-width: 65px; text-align: center; }
-        .game-image-container { width: 70px; height: 94px; background: #eee; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+        .game-image-container { width: 128px; height: 72px; background: #eee; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
         .game-image { width: 100%; height: 100%; object-fit: cover; }
         .game-title { font-weight: 700; font-size: 1.2rem; color: var(--text); }
         .engagement-value { color: var(--nin-red); font-weight: 700; }
@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 8.1 — Confidence-Weighted Edition</p>
+            <p class="version-tag">RAWG Edition — Confidence-Weighted</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -45,33 +45,167 @@
         </div>
         <div id="content"></div>
         <footer>
-            Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
-            Ranked by a confidence-weighted Total Rating — low review counts are pulled toward the year average.
+            Built by noiseredux &nbsp;·&nbsp; Data powered by RAWG (rawg.io) <br>
+            Ranked by a confidence-weighted blend of RAWG's <code>rating</code> and <code>ratings_count</code> — thin samples get pulled toward the year average. Unreleased and unrated (0 ratings) games are excluded.
         </footer>
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby4Eu0nbJemVZb7uDvfdSQdEddKXwWGXufhaCWdcG89khKN-Q0-TZimRClmxL2lb9bGsQ/exec';
-
-        const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35];
-        const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG' };
-
-        // v8.0: All custom hype-scoring logic (sport/affiliated/pillar/Nintendo-IP/CDi/
-        // Virtual Boy/WonderSwan/Digital Pictures multipliers, etc.) has been removed.
-        // Ranking is now a direct sort by IGDB's `total_rating` field — the composite
-        // of IGDB user ratings (`rating`) and external critic scores (`aggregated_rating`).
-        // This build exists purely as a baseline comparison against the hype-index build.
+        // ============================================================
+        // RAWG EXPERIMENT BUILD
         //
-        // v8.1: Ranking now uses `confidence_score`, computed server-side in the Apps
-        // Script backend as a Bayesian/weighted average of total_rating and
-        // total_rating_count. Games with few reviews get pulled toward the year's
-        // average rather than standing on a thin sample alone; games with a large
-        // review count land close to their raw total_rating. Raw total_rating and
-        // review count are still shown alongside it so the effect of the weighting
-        // is visible, not hidden.
+        // Sibling to the IGDB-powered "confidence-weighted" build.
+        // Architecture differs from the IGDB build on purpose: RAWG auth is
+        // just an API key query param (no Twitch-style OAuth client
+        // secret/token exchange), so there's no need for a Google Apps
+        // Script backend proxy at all — this single HTML file talks to
+        // RAWG directly from the browser.
+        //
+        // Platform matching: rather than hardcoding RAWG platform IDs from
+        // memory (RAWG's IDs don't correspond to IGDB's, and getting one
+        // wrong silently breaks filtering), this fetches RAWG's real
+        // /platforms list once on load and matches by name against the
+        // same curated console/handheld set the IGDB build's
+        // ALLOWED_PLATFORMS implies. Anything RAWG doesn't have a matching
+        // platform for is skipped rather than guessed at.
+        //
+        // v2: RAWG lets players rate games before release (pre-release hype
+        // ratings), which let unreleased titles like GTA6 show up in a
+        // "released this year" list. Fixed two ways: the `dates` filter's
+        // end bound is capped at today when querying the current year (so
+        // RAWG's own release-date filter does most of the work), AND a
+        // client-side safety net drops anything with `tba: true` or a
+        // `released` date after today — covering games RAWG has flagged as
+        // not-yet-final or where the date/timezone boundary is ambiguous.
+        //
+        // v2: Games with ratings_count === 0 are now dropped outright
+        // (previously "no minimum" meant no floor at all, including zero).
+        // A rating of 0 backed by zero ratings isn't a low score, it's no
+        // signal — nothing to confidence-weight in the first place.
+        //
+        // v2: Added real confidence weighting (Bayesian/weighted average,
+        // same approach as the IGDB build): each game's `rating` is pulled
+        // toward the year's mean rating, with pull strength governed by
+        // CONFIDENCE_M relative to the game's own ratings_count. This
+        // requires a same-scale mean computed from the fetched candidate
+        // pool, so games must be gathered *then* scored — sorting can no
+        // longer happen server-side via `ordering=-rating` alone.
+        //
+        // v2: Because raw `rating` no longer drives fetch order, and RAWG's
+        // `ordering` param doesn't support sorting by ratings_count (its
+        // documented sort fields are name/released/added/created/updated/
+        // rating/metacritic — no review-count field), the fetch now orders
+        // by `-added` (RAWG's "how many users have this in their library"
+        // count) purely to make sure widely-known, well-reviewed games are
+        // pulled into the candidate window rather than getting crowded out
+        // by thin-sample rating flukes — the same problem the IGDB build's
+        // v7.6.0 fix addressed by sorting fetch order on review volume
+        // instead of raw rating. `added` never factors into the actual
+        // confidence_score; it only decides what gets fetched.
+        // ============================================================
 
-        // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
-        const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
+        const RAWG_API_KEY = '8c1d0b59c9624665b6b61b74b1787d97';
+        const RAWG_BASE = 'https://api.rawg.io/api';
+
+        // Pages of 40 (RAWG's max page_size) to pull per year, ordered by
+        // -added (see v2 note above on why raw -rating isn't used for fetch
+        // order once confidence weighting is in play).
+        const MAX_PAGES_PER_YEAR = 5; // up to 200 games considered per year
+
+        // Bayesian confidence constant: how many ratings it takes before a
+        // game's raw `rating` is trusted mostly on its own, rather than
+        // being pulled toward the year's mean. Same role as CONFIDENCE_M in
+        // the IGDB build; RAWG's rating scale (0-5) and typical review
+        // volumes are different from IGDB's, so this is a fresh tuning
+        // value, not a ported constant.
+        const CONFIDENCE_M = 10;
+
+        // v3: Tag-based content blocklist. RAWG's game list response
+        // includes a `tags` array (id/name/slug) on each game by default, so
+        // this can be checked client-side with no extra request. RAWG's own
+        // `tags` query param only supports filtering games *in*, not
+        // excluding them, so exclusion has to happen here. Matched by slug
+        // (stable/lowercase) with a name fallback in case a game is missing
+        // an expected slug. Add more slugs here as needed.
+        const BLOCKED_TAG_SLUGS = ['hentai', 'porn'];
+
+        // Curated preferred-platform keywords, matching the spirit of the
+        // IGDB build's ALLOWED_PLATFORMS: consoles/handhelds + Mac/iOS, no
+        // PC/Windows, no Xbox family, no Linux/browser/Stadia.
+        // Matched case-insensitively as substrings against RAWG's real
+        // platform names, since RAWG's own catalog is coarser in places
+        // than IGDB's (e.g. it may not carry every ultra-retro system).
+        const PREFERRED_PLATFORM_KEYWORDS = [
+            { key: 'apple ii',            abbr: 'A2' },
+            { key: 'macos',               abbr: 'Mac' },
+            { key: 'classic macintosh',   abbr: 'Mac' }, // RAWG splits "macOS" and "Classic Macintosh" into separate platforms; both map to Mac
+            { key: 'ios',                 abbr: 'iOS' },
+            { key: 'nes',                 abbr: 'NES' },
+            { key: 'famicom disk',        abbr: 'FDS' },
+            { key: 'super nintendo',      abbr: 'SNES' },
+            { key: 'snes',                abbr: 'SNES' },
+            { key: 'nintendo 64',         abbr: 'N64' },
+            { key: 'gamecube',            abbr: 'GC' },
+            { key: 'wii u',               abbr: 'WiiU' },
+            { key: 'wii',                 abbr: 'Wii' },
+            { key: 'switch',              abbr: 'NS' },
+            { key: 'game boy advance',    abbr: 'GBA' },
+            { key: 'game boy color',      abbr: 'GBC' },
+            { key: 'game boy',            abbr: 'GB' },
+            { key: 'nintendo ds',         abbr: 'DS' },
+            { key: '3ds',                 abbr: '3DS' },
+            { key: 'msx',                 abbr: 'MSX' },
+            { key: 'atari 2600',          abbr: '2600' },
+            { key: 'colecovision',        abbr: 'CV' },
+            { key: 'cd-i',                abbr: 'CDi' },
+            { key: 'sega cd',             abbr: 'SCD' },
+            { key: 'wonderswan',          abbr: 'WS' },
+            { key: 'virtual boy',         abbr: 'VB' },
+            { key: 'playstation 5',       abbr: 'PS5' },
+            { key: 'playstation 4',       abbr: 'PS4' },
+            { key: 'playstation 3',       abbr: 'PS3' },
+            { key: 'playstation 2',       abbr: 'PS2' },
+            { key: 'ps vita',             abbr: 'PSV' },
+            { key: 'psp',                 abbr: 'PSP' },
+            { key: 'playstation',         abbr: 'PS1' }, // fallback catch for base "PlayStation"
+            { key: 'x68000',              abbr: 'X68k' },
+            { key: 'turbografx',          abbr: 'TG16' },
+            { key: 'pc engine',           abbr: 'TG16' },
+            { key: 'genesis',             abbr: 'GEN' },
+            { key: 'mega drive',          abbr: 'GEN' },
+            { key: '32x',                 abbr: '32X' },
+            { key: 'sega master system',  abbr: 'SMS' },
+            { key: 'game gear',           abbr: 'GG' },
+            { key: 'sega saturn',         abbr: 'SAT' },
+            { key: 'dreamcast',           abbr: 'DC' },
+        ];
+
+        // IGDB category blacklist has no direct RAWG equivalent field; RAWG's
+        // closest lever is the `exclude_additions` query param (DLC/expansions/
+        // editions), applied server-side below.
+
+        let allowedPlatformMap = null; // Map<rawgPlatformId, abbrLabel>
+
+        async function fetchAllPlatforms() {
+            const map = new Map();
+            let url = `${RAWG_BASE}/platforms?key=${RAWG_API_KEY}&page_size=50`;
+            let guard = 0;
+            while (url && guard < 5) {
+                guard++;
+                const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error(`RAWG /platforms request failed: HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                (data.results || []).forEach(p => {
+                    const nameLower = (p.name || '').toLowerCase();
+                    const match = PREFERRED_PLATFORM_KEYWORDS.find(k => nameLower.includes(k.key));
+                    if (match) map.set(p.id, match.abbr);
+                });
+                url = data.next;
+            }
+            return map;
+        }
 
         function populateYearDropdown() {
             const select = document.getElementById('yearSelect');
@@ -82,50 +216,122 @@
             }
         }
 
-        function displayGames(gamesList) {
+        async function fetchGamesForYear(year) {
+            const platformIds = Array.from(allowedPlatformMap.keys());
+
+            // Cap the end of the date range at today when querying the
+            // current year, so RAWG's own filter already excludes games
+            // that haven't released yet (e.g. GTA6) instead of relying
+            // solely on the client-side safety net below.
+            const now = new Date();
+            const yearNum = parseInt(year, 10);
+            const isCurrentYear = yearNum === now.getUTCFullYear();
+            const endDate = isCurrentYear ? now.toISOString().slice(0, 10) : `${year}-12-31`;
+
+            const params = new URLSearchParams({
+                key: RAWG_API_KEY,
+                dates: `${year}-01-01,${endDate}`,
+                platforms: platformIds.join(','),
+                ordering: '-added',
+                exclude_additions: 'true',
+                page_size: '40'
+            });
+
+            let url = `${RAWG_BASE}/games?${params.toString()}`;
+            const games = [];
+            let page = 0;
+            while (url && page < MAX_PAGES_PER_YEAR) {
+                page++;
+                const res = await fetch(url);
+                if (!res.ok) {
+                    throw new Error(`RAWG /games request failed: HTTP ${res.status}`);
+                }
+                const data = await res.json();
+                games.push(...(data.results || []));
+                url = data.next;
+            }
+            return games;
+        }
+
+        // Converts RAWG's 0-5 rating to a rounded 0-100 scale, Metacritic-style.
+        function toHundredScale(rating) {
+            return Math.round((rating || 0) * 20);
+        }
+
+        function hasBlockedTag(game) {
+            return (game.tags || []).some(t => {
+                const slug = (t.slug || '').toLowerCase();
+                const name = (t.name || '').toLowerCase();
+                return BLOCKED_TAG_SLUGS.some(blocked => slug === blocked || name === blocked);
+            });
+        }
+
+        function displayGames(rawGames) {
             const content = document.getElementById('content');
+            const now = new Date();
 
-            let filtered = gamesList.filter(game => {
-                const isCorrectPlatform = game.platforms.some(id => ALLOWED_PLATFORMS.includes(id));
-                const isBlacklistedCategory = game.category && BLACKLISTED_CATEGORIES.includes(game.category);
-                return isCorrectPlatform && !isBlacklistedCategory;
+            // Fix 1: drop anything not actually released yet. RAWG's `dates`
+            // filter already excludes most future-dated games server-side,
+            // but `tba` (to-be-announced) titles and timezone-boundary edge
+            // cases can still slip through, so re-check client-side too.
+            // Fix 2: drop anything with zero ratings — a 0.00 rating backed
+            // by 0 ratings isn't a real score to weight, it's just absent data.
+            // v3: drop anything carrying a blocked content tag.
+            const eligible = rawGames.filter(g => {
+                const onAllowedPlatform = (g.platforms || []).some(p => allowedPlatformMap.has(p.platform.id));
+                const isReleased = !!g.released && !g.tba && new Date(g.released + 'T00:00:00Z') <= now;
+                const hasRatings = (g.ratings_count || 0) > 0;
+                return onAllowedPlatform && isReleased && hasRatings && !hasBlockedTag(g);
             });
 
-            filtered.forEach(game => {
-                // v8.1: score is the backend's confidence-weighted composite,
-                // not raw total_rating.
-                game.total_score = game.confidence_score || 0;
-            });
-
-            filtered = filtered.filter(game => game.total_score > 0);
-            filtered.sort((a, b) => b.total_score - a.total_score);
-
-            if (!filtered.length) {
+            if (!eligible.length) {
                 content.innerHTML = '<div class="loading">No records found for this year.</div>';
                 return;
             }
 
+            // Fix 3: confidence-weight the ratings (Bayesian/weighted average,
+            // same shape as the IGDB build's approach). Each game's rating is
+            // pulled toward the year's mean rating in proportion to how thin
+            // its own ratings_count is relative to CONFIDENCE_M.
+            const meanRating = eligible.reduce((sum, g) => sum + g.rating, 0) / eligible.length;
+            eligible.forEach(g => {
+                const v = g.ratings_count || 0;
+                const R = g.rating || 0;
+                g.confidence_score = (v / (v + CONFIDENCE_M)) * R + (CONFIDENCE_M / (v + CONFIDENCE_M)) * meanRating;
+            });
+
+            eligible.sort((a, b) => {
+                if (b.confidence_score !== a.confidence_score) return b.confidence_score - a.confidence_score;
+                return (b.ratings_count || 0) - (a.ratings_count || 0);
+            });
+
             const grid = document.createElement('div');
             grid.className = 'games-grid';
 
-            filtered.forEach((game, index) => {
+            eligible.forEach((game, index) => {
                 const card = document.createElement('a');
                 card.className = 'game-card';
-                card.href = `https://www.igdb.com/games/${game.slug}`;
+                card.href = `https://rawg.io/games/${game.slug}`;
                 card.target = '_blank';
-                const coverUrl = game.cover ? `https://images.igdb.com/igdb/image/upload/t_cover_small/${game.cover}.jpg` : '';
+                const coverUrl = game.background_image || '';
+                const platformTags = (game.platforms || [])
+                    .map(p => allowedPlatformMap.get(p.platform.id))
+                    .filter(Boolean);
+                const uniqueTags = Array.from(new Set(platformTags));
+
                 card.innerHTML = `
                     <div class="game-rank">#${index + 1}</div>
-                    <div class="game-image-container">${game.cover ? `<img class="game-image" src="${coverUrl}" alt="${game.name} cover">` : ''}</div>
+                    <div class="game-image-container">${coverUrl ? `<img class="game-image" src="${coverUrl}" alt="${game.name} cover">` : ''}</div>
                     <div class="game-info">
                         <div class="game-title">${game.name}</div>
                         <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
-                            Confidence Score: <span class="engagement-value">${game.total_score.toFixed(1)}</span>
-                            &nbsp;·&nbsp; Raw Rating: ${(game.total_rating || 0).toFixed(1)}
-                            &nbsp;·&nbsp; ${game.total_rating_count || 0} reviews
+                            Confidence Score: <span class="engagement-value">${toHundredScale(game.confidence_score)}</span>
+                            &nbsp;·&nbsp; Raw Rating: ${toHundredScale(game.rating)}
+                            &nbsp;·&nbsp; ${game.ratings_count || 0} ratings
+                            ${game.metacritic ? `&nbsp;·&nbsp; Metacritic ${game.metacritic}` : ''}
                         </div>
                         <div style="margin-top: 4px;">
-                            ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}
+                            ${uniqueTags.map(abbr => `<span class="platform-tag">${abbr}</span>`).join('')}
                         </div>
                     </div>`;
                 grid.appendChild(card);
@@ -139,12 +345,17 @@
             const content = document.getElementById('content');
             content.innerHTML = '<div class="loading">Loading Index...</div>';
             try {
-                const response = await fetch(`${GOOGLE_SCRIPT_URL}?year=${year}&_cb=${Date.now()}`);
-                const data = await response.json();
-                displayGames(data.games || []);
+                if (!allowedPlatformMap) {
+                    allowedPlatformMap = await fetchAllPlatforms();
+                }
+                const games = await fetchGamesForYear(year);
+                displayGames(games);
             } catch (e) {
                 console.error(e);
-                content.innerHTML = `<div class="loading" style="color:red">System Connection Error.</div>`;
+                const hint = /401/.test(e.message)
+                    ? ' Your RAWG API key may be invalid or inactive — double check it at rawg.io/apidocs.'
+                    : '';
+                content.innerHTML = `<div class="loading" style="color:red">System Connection Error.${hint}</div>`;
             }
         }
 
