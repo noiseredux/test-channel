@@ -46,7 +46,7 @@
         <div id="content"></div>
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by RAWG (rawg.io) <br>
-            Ranked by a confidence-weighted blend of RAWG's <code>rating</code> and <code>ratings_count</code> — thin samples get pulled toward the year average. Unreleased and unrated (0 ratings) games are excluded, along with flagged tags and itch.io storefront listings.
+            Ranked by a confidence-weighted blend of RAWG's <code>rating</code> and <code>ratings_count</code> — thin samples get pulled toward the year average. Unreleased and unrated (0 ratings) games are excluded, along with flagged tags and games sold exclusively on itch.io.
         </footer>
     </div>
 
@@ -184,14 +184,13 @@
             { key: 'dreamcast',           abbr: 'DC' },
         ];
 
-        // v4: Storefronts to exclude entirely via RAWG's native `exclude_stores`
-        // filter (a real server-side param — see fetchExcludedStoreIds below).
-        // itch.io hosts a huge volume of NSFW/hentai indie content, so this
-        // is a much stronger and more reliable dragnet than tag-matching:
-        // it doesn't depend on a game being tagged consistently or completely,
-        // it just removes anything sold through that storefront, full stop.
-        // Tradeoff: this also excludes any legitimate, non-adult games that
-        // happen to be itch.io-exclusive.
+        // v5: Storefronts used to detect itch.io-EXCLUSIVE games (see
+        // isItchExclusive() below), not to blanket-exclude anything that
+        // merely lists on itch.io. A game also sold on Steam/GOG/etc. is
+        // left alone even if it's also on itch. itch.io hosts a huge volume
+        // of NSFW/hentai indie content that's *only* ever released there,
+        // so "itch is this game's only storefront" is a much more targeted
+        // signal than "this game happens to be on itch."
         const EXCLUDED_STORE_KEYWORDS = ['itch'];
 
         // IGDB category blacklist has no direct RAWG equivalent field; RAWG's
@@ -274,9 +273,13 @@
                 exclude_additions: 'true',
                 page_size: '40'
             });
-            if (excludedStoreIds && excludedStoreIds.length) {
-                params.set('exclude_stores', excludedStoreIds.join(','));
-            }
+            // v5: no server-side exclude_stores here anymore — RAWG's filter
+            // only supports "not on this store at all," which wrongly caught
+            // games also sold on Steam/GOG/etc. that merely happen to also
+            // list on itch.io. Itch-EXCLUSIVE detection now happens
+            // client-side in displayGames() against each game's `stores`
+            // array, since "only available on X" isn't expressible as an
+            // Apicalypse-style where-clause filter.
 
             let url = `${RAWG_BASE}/games?${params.toString()}`;
             const games = [];
@@ -307,6 +310,20 @@
             });
         }
 
+        // v5: true only if every storefront listed for this game is one of
+        // the excluded stores (itch.io) — i.e. itch is the ONLY place it's
+        // sold, not merely one of several. A game also on Steam/GOG/etc.
+        // that happens to list on itch too is left alone. If RAWG has no
+        // store data for a game at all, this returns false (can't determine
+        // "only," so don't exclude on a guess) — that game is still subject
+        // to every other filter (platform, tags, etc.) as normal.
+        function isItchExclusive(game) {
+            const stores = game.stores || [];
+            if (!stores.length || !excludedStoreIds || !excludedStoreIds.length) return false;
+            const excludedSet = new Set(excludedStoreIds);
+            return stores.every(s => excludedSet.has(s.store ? s.store.id : s.id));
+        }
+
         function displayGames(rawGames) {
             const content = document.getElementById('content');
             const now = new Date();
@@ -320,11 +337,14 @@
             // v3: drop anything carrying a blocked content tag, checked
             // directly against the tags already present on the list
             // response (confirmed working — no detail-endpoint lookup needed).
+            // v5: drop anything sold ONLY on itch.io (see isItchExclusive) —
+            // narrower than the earlier blanket exclude_stores approach,
+            // which also caught legitimate games that merely also list there.
             const eligible = rawGames.filter(g => {
                 const onAllowedPlatform = (g.platforms || []).some(p => allowedPlatformMap.has(p.platform.id));
                 const isReleased = !!g.released && !g.tba && new Date(g.released + 'T00:00:00Z') <= now;
                 const hasRatings = (g.ratings_count || 0) > 0;
-                return onAllowedPlatform && isReleased && hasRatings && !hasBlockedTag(g.tags);
+                return onAllowedPlatform && isReleased && hasRatings && !hasBlockedTag(g.tags) && !isItchExclusive(g);
             });
 
             if (!eligible.length) {
