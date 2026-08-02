@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.4.0</p>
+            <p class="version-tag">Version 7.4.1</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -59,19 +59,20 @@
         // --- Scoring constants ---
         const GENRE_SPORT_ID = 14;
         const SPORT_MULTIPLIER = 2.5;
-        // v7.4.0: EXPERIMENTAL SPLIT. The single AFFILIATED_MULTIPLIER is now two
-        // separate constants, one per lineage. Rationale: Nintendo effectively
-        // rebuilt the US console market single-handedly after the 1983 crash, and
-        // titles like Ocarina of Time have held an unmatched, decades-long critical
-        // consensus (Metacritic's #1 game of all time since inception) that the
-        // shared multiplier wasn't fully reflecting relative to Sony-lineage peers.
-        // This is a genuine structural rule applied to the whole Nintendo lineage,
-        // not a cherry-picked boost for specific titles — consistent with every
-        // other boost in this system. Sony's multiplier is unchanged at the
-        // original 3.75x baseline. Trial status: if this distorts results across
-        // other years, roll back to a single shared AFFILIATED_MULTIPLIER = 3.75
-        // (v7.3.0 behavior).
-        const NINTENDO_AFFILIATED_MULTIPLIER = 4.5;
+        // v7.4.1: Nintendo multiplier recalibrated to a stated ratio rather than a
+        // flat guess — 1.75x Sony's rate (3.75 * 1.75 = 6.5625). Rationale: Nintendo
+        // first-party titles are hypothesized to structurally under-accumulate raw
+        // IGDB engagement (follows/hypes/reviews) relative to Sony first-party
+        // titles of the same era, likely due to differing community/platform
+        // engagement habits with IGDB itself rather than any real popularity gap.
+        // 1.75x was chosen after testing 1.5x/1.75x/2x against 2014 specifically:
+        // 2x pushed Mario Kart 8 all the way to #2, ahead of South Park: Stick of
+        // Truth, which was explicitly more than intended; 1.75x lifts MK8 past
+        // Watch Dogs and Dark Souls II without overtaking South Park. Trial status:
+        // if this proves too extreme or not extreme enough across other years,
+        // adjust the ratio directly (this constant is 3.75 * ratio) or roll back to
+        // the flat v7.4.0 value of 4.5.
+        const NINTENDO_AFFILIATED_MULTIPLIER = 6.5625;
         const SONY_AFFILIATED_MULTIPLIER = 3.75;
         const AWARD_MULTIPLIER = 1.2;
 
