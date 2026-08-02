@@ -37,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.4.1</p>
+            <p class="version-tag">Version 7.4.2</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -59,20 +59,19 @@
         // --- Scoring constants ---
         const GENRE_SPORT_ID = 14;
         const SPORT_MULTIPLIER = 2.5;
-        // v7.4.1: Nintendo multiplier recalibrated to a stated ratio rather than a
-        // flat guess — 1.75x Sony's rate (3.75 * 1.75 = 6.5625). Rationale: Nintendo
-        // first-party titles are hypothesized to structurally under-accumulate raw
-        // IGDB engagement (follows/hypes/reviews) relative to Sony first-party
-        // titles of the same era, likely due to differing community/platform
-        // engagement habits with IGDB itself rather than any real popularity gap.
-        // 1.75x was chosen after testing 1.5x/1.75x/2x against 2014 specifically:
-        // 2x pushed Mario Kart 8 all the way to #2, ahead of South Park: Stick of
-        // Truth, which was explicitly more than intended; 1.75x lifts MK8 past
-        // Watch Dogs and Dark Souls II without overtaking South Park. Trial status:
-        // if this proves too extreme or not extreme enough across other years,
-        // adjust the ratio directly (this constant is 3.75 * ratio) or roll back to
-        // the flat v7.4.0 value of 4.5.
-        const NINTENDO_AFFILIATED_MULTIPLIER = 6.5625;
+        // v7.4.2: Nintendo multiplier recalibrated again to 2.2x Sony's rate
+        // (3.75 * 2.2 = 8.25). Rationale: two independent test cases converged on
+        // roughly this same ratio — Animal Crossing: New Horizons needing ~2.22x
+        // to clear Ghost of Tsushima (2020), and Super Mario Odyssey needing ~2.18x
+        // to clear NieR: Automata (2017) — landing within a hair of each other
+        // despite being completely different years and matchups. Note: the NieR
+        // comparison is influenced by NieR also receiving the separate Pillar boost
+        // (Square Enix as publisher) stacked on top of its Sony-affiliated
+        // multiplier (PlatinumGames as developer); that stacking is accepted
+        // project philosophy as of this version, so the 2.2x figure is calibrated
+        // against the real, current scoring behavior rather than a hypothetical
+        // unstacked baseline. Supersedes the 1.75x ratio from v7.4.1.
+        const NINTENDO_AFFILIATED_MULTIPLIER = 8.25;
         const SONY_AFFILIATED_MULTIPLIER = 3.75;
         const AWARD_MULTIPLIER = 1.2;
 
