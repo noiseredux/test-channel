@@ -30,7 +30,6 @@
         .game-title { font-weight: 700; font-size: 1.2rem; color: var(--text); }
         .engagement-value { color: var(--nin-red); font-weight: 700; }
         .platform-tag { background: #edf2f7; color: #4a5568; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #cbd5e0; }
-        .trend-badge { background: #fff4e0; color: #b45f06; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #f2c078; }
         footer { padding: 50px; text-align: center; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid #e2e2ea; }
     </style>
 </head>
@@ -38,7 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.6.0</p>
+            <p class="version-tag">Version 7.6.1</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -52,7 +51,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyUhqm3gLlqzSrK-tfxB-uHfTbUBfUwYiHxLmMJqeBPiADBHta1Eg2QUi-1UPtpZkrD/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
 
         const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35];
         const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG' };
@@ -602,7 +601,7 @@
         const CRITICAL_DARLING_MIN_REVIEWS = 100;
         const CRITICAL_DARLING_MULTIPLIER = 1.25;
 
-        // v7.6.0: PopScore is now an ADDITIVE base-score contributor, same tier as
+        // v7.6.0: PopScore is an ADDITIVE base-score contributor, same tier as
         // reviews/follows/hypes, rather than a multiplier — a multiplier can never
         // rescue a game whose legacy engagement fields are all zero (e.g. Marvel
         // Tokon), since anything times zero is still zero. POP_SCORE_BASE_WEIGHT
@@ -610,10 +609,8 @@
         // ~0.002-0.003 for the biggest titles) up into the same rough numeric
         // range as the rest of the base formula. This is an untested starting
         // point, same as every other constant here — needs real-year comparison
-        // to calibrate. The old top-N multiplier is gone; "Trending" is now purely
-        // a visual flag (top N by PopScore that year) decoupled from scoring.
+        // to calibrate.
         const POP_SCORE_BASE_WEIGHT = 1000000;
-        const POP_SCORE_TOP_N = 10;
 
         // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
         const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
@@ -746,17 +743,6 @@
                 return isCorrectPlatform && !isBlacklistedCategory;
             });
 
-            // v7.6.0: Rank this year's filtered field by popScore to determine which
-            // games get the "Trending" badge. Decoupled from scoring as of v7.6.0 —
-            // PopScore's actual effect on hype_score now happens additively in the
-            // base formula below, using the raw value directly rather than a top-N
-            // cutoff. This ranking exists purely so the badge can visually flag
-            // "top of the field this year" for comparison purposes.
-            const popScoreRanked = [...filtered]
-                .filter(g => g.popScore > 0)
-                .sort((a, b) => b.popScore - a.popScore);
-            const popScoreTopSlugs = new Set(popScoreRanked.slice(0, POP_SCORE_TOP_N).map(g => g.slug));
-
             filtered.forEach(game => {
                 let score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0) + ((game.popScore || 0) * POP_SCORE_BASE_WEIGHT);
 
@@ -883,7 +869,6 @@
                             Hype Score: <span class="engagement-value">${game.hype_score}</span>
                         </div>
                         <div style="margin-top: 4px;">
-                            ${popScoreTopSlugs.has(game.slug) ? '<span class="trend-badge">Trending</span>' : ''}
                             ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}
                         </div>
                     </div>`;
