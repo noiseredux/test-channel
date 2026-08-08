@@ -30,6 +30,7 @@
         .game-title { font-weight: 700; font-size: 1.2rem; color: var(--text); }
         .engagement-value { color: var(--nin-red); font-weight: 700; }
         .platform-tag { background: #edf2f7; color: #4a5568; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #cbd5e0; }
+        .trend-badge { background: #fff4e0; color: #b45f06; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #f2c078; }
         footer { padding: 50px; text-align: center; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid #e2e2ea; }
     </style>
 </head>
@@ -37,7 +38,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 7.4.3</p>
+            <p class="version-tag">Version 7.5.0</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -601,6 +602,25 @@
         const CRITICAL_DARLING_MIN_REVIEWS = 100;
         const CRITICAL_DARLING_MULTIPLIER = 1.25;
 
+        // v7.5.0: EXPERIMENTAL. PopScore trend boost — ranks games within a given
+        // year by their combined "Want to Play" + "Playing" + "Played" score
+        // (IGDB PopScore, fetched from the popularity_primitives endpoint by the
+        // backend and passed through as game.popScore). The top N games by this
+        // relative, cross-platform trend signal receive a flat multiplier. Unlike
+        // every other boost in this system, this one is NOT self-contained per
+        // game — PopScore values are tiny relative decimals only meaningful when
+        // ranked against the rest of that year's field, so this requires a
+        // full-field ranking pass rather than a per-game check. "Visits" was
+        // deliberately excluded on the backend — testing showed it spikes on
+        // low-denominator/noisy titles rather than reflecting sustained interest,
+        // unlike Want to Play/Playing/Played, which tracked closely with expected
+        // heavy-hitters (Crimson Desert, Resident Evil Requiem, Forza Horizon 6,
+        // etc). Trial status: compare directly against v7.4.3 rankings before
+        // deciding whether to keep, retune N/multiplier, or abandon this data
+        // source. Both values below are untested starting points.
+        const POP_SCORE_TOP_N = 10;
+        const POP_SCORE_MULTIPLIER = 1.5;
+
         // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
         const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
 
@@ -732,6 +752,15 @@
                 return isCorrectPlatform && !isBlacklistedCategory;
             });
 
+            // v7.5.0: Rank this year's filtered field by popScore to determine
+            // which games qualify for the PopScore trend boost. Must happen here,
+            // against the full filtered field, before individual scoring below —
+            // this is a relative ranking, not a per-game threshold.
+            const popScoreRanked = [...filtered]
+                .filter(g => g.popScore > 0)
+                .sort((a, b) => b.popScore - a.popScore);
+            const popScoreTopSlugs = new Set(popScoreRanked.slice(0, POP_SCORE_TOP_N).map(g => g.slug));
+
             filtered.forEach(game => {
                 let score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0);
 
@@ -829,6 +858,15 @@
                     score = Math.round(score * CRITICAL_DARLING_MULTIPLIER);
                 }
 
+                // v7.5.0: PopScore trend boost. Fires if this game ranked in the
+                // top N of this year's field by combined Want to Play/Playing/
+                // Played score. Stacks with everything else, same as Critical
+                // Darling — this is a "did this also break through right now"
+                // signal, independent of franchise/publisher/platform corrections.
+                if (popScoreTopSlugs.has(game.slug)) {
+                    score = Math.round(score * POP_SCORE_MULTIPLIER);
+                }
+
                 game.hype_score = score;
             });
 
@@ -858,6 +896,7 @@
                             Hype Score: <span class="engagement-value">${game.hype_score}</span>
                         </div>
                         <div style="margin-top: 4px;">
+                            ${popScoreTopSlugs.has(game.slug) ? '<span class="trend-badge">Trending</span>' : ''}
                             ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}
                         </div>
                     </div>`;
