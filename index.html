@@ -53,9 +53,11 @@
 
     <script>
         // --- CONFIG -----------------------------------------------------
-        // Replace with the raw GitHub URL of your CSV file, e.g.:
-        // https://raw.githubusercontent.com/<username>/<repo>/main/want-to-play.csv
-        const CSV_URL = 'https://github.com/noiseredux/test-channel/blob/main/want-to-play.csv';
+        // Must be the raw.githubusercontent.com URL, not a github.com/.../blob/
+        // page — the blob page serves HTML with no CORS headers, so fetch()
+        // will fail with an "Access-Control-Allow-Origin" error like the one
+        // above.
+        const CSV_URL = 'https://raw.githubusercontent.com/noiseredux/test-channel/main/want-to-play.csv';
 
         // IGDB categories to exclude (DLC, expansions, bundles, etc.) — matched
         // case-insensitively against the CSV's "category" column.
