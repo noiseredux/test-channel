@@ -24,6 +24,7 @@
         .loading { text-align: center; padding: 80px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--ps-blue); }
         .games-grid { display: flex; flex-direction: column; gap: 12px; padding: 30px; max-width: 900px; margin: 0 auto; }
         .game-card { background: white; border: 1px solid #dcdce8; border-radius: 8px; display: flex; align-items: center; padding: 14px; gap: 20px; text-decoration: none; color: inherit; transition: all 0.2s ease; }
+        .game-card.below-top5 { background: #f7f7fa; }
         .game-card:hover { transform: translateX(8px); border-color: var(--ps-blue-light); }
         .game-rank { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--ps-blue); min-width: 65px; text-align: center; }
         .game-image-container { width: 70px; height: 94px; background: #eee; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
@@ -61,7 +62,7 @@
 
         // URL of the cover-art Apps Script deployment (see cover-art-backend.gs).
         // Replace after deploying.
-        const COVER_ART_URL = 'https://script.google.com/macros/s/AKfycbyUhqm3gLlqzSrK-tfxB-uHfTbUBfUwYiHxLmMJqeBPiADBHta1Eg2QUi-1UPtpZkrD/exec';
+        const COVER_ART_URL = 'https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec';
 
         const COVER_CACHE_KEY = 'noiseredux_cover_cache_v1';
         const COVER_BATCH_SIZE = 100; // keep query-string length safely small per request
@@ -267,7 +268,7 @@
 
             gamesList.forEach((game, index) => {
                 const card = document.createElement('a');
-                card.className = 'game-card';
+                card.className = 'game-card' + (index >= 5 ? ' below-top5' : '');
                 card.href = game.url || '#';
                 card.target = '_blank';
                 const imageId = game.id != null ? coverCache[game.id] : null;
