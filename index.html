@@ -1,304 +1,68 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>What Should Noiseredux Play?</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-    <style>
-        :root {
-            --ps-blue: #003087;
-            --ps-blue-light: #0070cc;
-            --nin-red: #e4000f;
-            --bg: #f4f4f9;
-            --text: #111118;
-            --text-muted: #8888aa;
-        }
-        body { background-color: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; margin: 0; }
-        .container { max-width: 1200px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.05); }
-        header { background: linear-gradient(135deg, var(--ps-blue) 0%, #001a4d 100%); border-bottom: 4px solid var(--nin-red); padding: 3rem 1.5rem; text-align: center; }
-        header h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 7vw, 4.2rem); color: #fff; line-height: 0.9; text-transform: uppercase; margin: 0; }
-        .version-tag { font-size: 0.8rem; letter-spacing: 0.3em; text-transform: uppercase; color: #ffffff; opacity: 0.8; margin-top: 0.75rem; font-weight: 500; }
-        .controls { background: #e2e2ea; padding: 15px; display: flex; justify-content: center; align-items: center; gap: 15px; }
-        .controls select { padding: 8px 20px; font-weight: 700; border: 2px solid var(--ps-blue); border-radius: 4px; color: var(--ps-blue); cursor: pointer; }
-        .loading { text-align: center; padding: 80px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--ps-blue); }
-        .games-grid { display: flex; flex-direction: column; gap: 12px; padding: 30px; max-width: 900px; margin: 0 auto; }
-        .game-card { background: white; border: 1px solid #dcdce8; border-radius: 8px; display: flex; align-items: center; padding: 14px; gap: 20px; text-decoration: none; color: inherit; transition: all 0.2s ease; }
-        .game-card.below-top5 { background: #f7f7fa; }
-        .game-card:hover { transform: translateX(8px); border-color: var(--ps-blue-light); }
-        .game-rank { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--ps-blue); min-width: 65px; text-align: center; }
-        .game-image-container { width: 70px; height: 94px; background: #eee; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
-        .game-image { width: 100%; height: 100%; object-fit: cover; }
-        .game-title { font-weight: 700; font-size: 1.2rem; color: var(--text); }
-        .engagement-value { color: var(--nin-red); font-weight: 700; }
-        .platform-tag { background: #edf2f7; color: #4a5568; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #cbd5e0; }
-        footer { padding: 50px; text-align: center; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid #e2e2ea; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <header>
-            <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">CSV Edition · v1.0.0</p>
-        </header>
-        <div class="controls">
-            <label>Select Year:</label>
-            <select id="yearSelect"></select>
-        </div>
-        <div id="content"></div>
-        <footer>
-            Built by noiseredux &nbsp;·&nbsp; Data sourced from an IGDB List, exported to CSV <br>
-            A personal want-to-play index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy.
-        </footer>
-    </div>
 
-    <script>
-        // --- CONFIG -----------------------------------------------------
-        // Must be the raw.githubusercontent.com URL, not a github.com/.../blob/
-        // page — the blob page serves HTML with no CORS headers, so fetch()
-        // will fail with an "Access-Control-Allow-Origin" error like the one
-        // above.
-        const CSV_URL = 'https://www.igdb.com/users/noiseredux/lists/want-to-play.csv';
 
-        // URL of the cover-art Apps Script deployment (see cover-art-backend.gs).
-        // Replace after deploying.
-        const COVER_ART_URL = 'https://script.google.com/macros/s/AKfycbyUhqm3gLlqzSrK-tfxB-uHfTbUBfUwYiHxLmMJqeBPiADBHta1Eg2QUi-1UPtpZkrD/exec';
+Claude is responding
 
-        const COVER_CACHE_KEY = 'noiseredux_cover_cache_v1';
-        const COVER_BATCH_SIZE = 100; // keep query-string length safely small per request
+/** * WHAT SHOULD NOISEREDUX PLAY? | BACKEND ENGINE v5.3.0 * * Change from v5.2.0: removed the PopScore integration added in v5.2.0. * getGamesForYear no longer queries popularity_primitives — that data proved * too volatile day-to-day for a stable ranking (it's a normalized share of * total c
+PASTED
 
-        // IGDB categories to exclude (DLC, expansions, bundles, etc.) — matched
-        // case-insensitively against the CSV's "category" column.
-        const CATEGORY_BLACKLIST = [
-            'dlc', 'expansion', 'bundle', 'standalone expansion', 'mod', 'episode', 'season'
-        ];
+<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <title>What Should Noiseredux Play?</title> <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" /> <style> :root { --ps-bl
+PASTED
+I am attaching the JS and HTML from my current project. I want you to understand it and be ready for any future work we may need to do on it.
 
-        // Full IGDB platform name -> short display tag, matching the look of
-        // the original site's abbreviated platform badges. Anything not in
-        // this map is displayed as-is.
-        const PLATFORM_ABBREVIATIONS = {
-            'PlayStation 5': 'PS5', 'PlayStation 4': 'PS4', 'PlayStation 3': 'PS3',
-            'PlayStation 2': 'PS2', 'PlayStation': 'PS1', 'PlayStation VR': 'PSVR',
-            'PlayStation VR2': 'PSVR2', 'PlayStation Portable': 'PSP', 'PlayStation Vita': 'PSV',
-            'Nintendo Switch 2': 'NS2', 'Nintendo Switch': 'NS', 'Wii U': 'WiiU', 'Wii': 'Wii',
-            'Nintendo GameCube': 'GC', 'Nintendo 64': 'N64',
-            'Nintendo Entertainment System': 'NES', 'Super Nintendo Entertainment System': 'SNES',
-            'Game Boy Advance': 'GBA', 'Game Boy Color': 'GBC', 'Game Boy': 'GB',
-            'Nintendo DS': 'DS', 'Nintendo 3DS': '3DS',
-            'PC (Microsoft Windows)': 'PC', 'Mac': 'Mac', 'iOS': 'iOS',
-            'Xbox Series X|S': 'XSX', 'Xbox One': 'XB1', 'Xbox 360': 'X360', 'Xbox': 'XBOX'
-        };
+Thought for 6s
+
+Thought for 6s
+Got it — I've read through both files and have a solid picture of the system:
+Backend (Apps Script, v5.3.0)
+doGet takes a year param, calls getGamesForYear, which queries IGDB for games released in that year (capped at now, sorted by total_rating_count, limit 500).
+Pulls in reviews, follows, hypes, genres, platforms (merged from both platforms and release_dates.platform), cover art, publishers/developers (split via the involved_companies.publisher/developer flags), and keywords.
+Handles IGDB OAuth token caching via PropertiesService with a 5-minute expiry buffer.
+Recently removed the PopScore integration (was pulling from popularity_primitives) because it was too volatile/relative-share-based and added an extra round trip — noted as reversible via version history if ever revisited.
+Frontend (v7.9.5) — this is where all the interesting logic lives:
+Fetches from the Apps Script endpoint per selected year, filters to allowed platforms and non-blacklisted categories (DLC/expansion/bundle/mod/episode/season excluded).
+Computes a hype_score per game from a base (reviews*3 + follows + hypes) run through a long chain of stacking multipliers, roughly in this order:
+Sport genre (2.5x)
+Major league sports slugs — Madden, MLB The Show, NHL, NASCAR, etc. (6.5x)
+Mainstream titles — CoD, Madden (2.0x)
+Nintendo-affiliated (8.25x) or Sony-affiliated (3.75x) — large, carefully maintained publisher/developer lineage lists (Apple folded into the Sony bucket for historical/legacy reasons, explicitly flagged as worth revisiting)
+Namco-specific kicker (1.5x, stacks on affiliated)
+Award keyword (1.2x)
+"Pillar" third parties — Square/Enix/Capcom/Konami (1.5x)
+Nintendo IP licensed to outside devs — Mario+Rabbids, Starlink, etc. (5.0x, with an explicit Ubisoft carve-out to stack with its Sony/Apple affiliation)
+CDi Zelda/Mario (33x), Virtual Boy (4x), WonderSwan (20x) — all data-sparsity corrections
+Digital Pictures developer (Night Trap era) — 22x
+Critical Darling (100+ combined reviews) — flat 1.25x, stacks on everything, applied last
+Every multiplier is documented in-line with real historical/business rationale for why it exists and why it's calibrated the way it is (e.g. the 8.25x Nintendo figure derived from two independent test-case calibrations converging on ~2.2x Sony's rate).
+I'm ready for whatever's next — tweaking multipliers, adding/removing affiliated studios, debugging ranking anomalies, adding features to the UI, refactoring, etc. What would you like to work on?
 
-        // --- HELPERS ------------------------------------------------------
-        function abbreviatePlatform(name) {
-            return PLATFORM_ABBREVIATIONS[name] || name;
-        }
+<!DOCTYPE html> <html lang="en"> <head> <meta charset="UTF-8"> <title>What Should Noiseredux Play?</title> <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" /> <style> :root { --ps-bl
+PASTED
+be aware of slight Nintendo/CDI update:
+Noted. The only change from v7.9.5 → v7.9.6:
+Version tag: 7.9.5 → 7.9.6
+CDI_MULTIPLIER: 33.0 → 40.0 (the comment above it still says "15x needed" — that's now stale/outdated relative to the actual value, was already stale at 33x too, so not a new issue introduced here, just flagging it's still unreconciled)
+Everything else — all other constants, lists, functions, scoring order, HTML/CSS — is identical to what I already have.
+Good to go for whatever's next.
+please give me current HTML file
 
-        function escapeHtml(str) {
-            const div = document.createElement('div');
-            div.textContent = str == null ? '' : str;
-            return div.innerHTML;
-        }
+Sleuthing
+
+Sleuthing
+
 
-        // The IGDB export stores these columns as JSON-array-looking strings,
-        // e.g. ["Nintendo Switch 2"] or ["Jul 23, 2026 (Worldwide [WW])"].
-        // Parse defensively since blank cells aren't valid JSON.
-        function parseJsonArrayField(raw) {
-            if (!raw) return [];
-            try {
-                const parsed = JSON.parse(raw);
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (e) {
-                return [];
-            }
-        }
+Ensure outputs directory exists
+
+
 
-        // We only care about the year, not the month/day, and a game can list
-        // several regional release dates. Pull every 4-digit year out of the
-        // field and use the earliest one.
-        function extractEarliestYear(releaseDateField) {
-            const dates = parseJsonArrayField(releaseDateField);
-            const text = dates.length ? dates.join(' ') : (releaseDateField || '');
-            const matches = text.match(/\b(19|20)\d{2}\b/g);
-            if (!matches) return null;
-            return Math.min(...matches.map(Number));
-        }
+Write the current version of the What Should Noiseredux Play HTML file (v7.9.6) exactly as provided
 
-        function isBlacklistedCategory(category) {
-            if (!category) return false;
-            return CATEGORY_BLACKLIST.includes(category.trim().toLowerCase());
-        }
 
-        // --- COVER ART -------------------------------------------------------
-        // Cache shape in localStorage: { "348977": "abc123", ... } mapping
-        // IGDB game ID -> IGDB cover image_id. Covers essentially never change
-        // for a given game, so once fetched they're kept indefinitely and only
-        // re-requested for IDs the cache hasn't seen before.
-        function loadCoverCache() {
-            try {
-                const raw = localStorage.getItem(COVER_CACHE_KEY);
-                return raw ? JSON.parse(raw) : {};
-            } catch (e) {
-                return {};
-            }
-        }
+Want to be notified when Claude responds?
 
-        function saveCoverCache(cache) {
-            try {
-                localStorage.setItem(COVER_CACHE_KEY, JSON.stringify(cache));
-            } catch (e) {
-                // localStorage full or unavailable — non-fatal, covers just
-                // won't persist between visits.
-                console.warn('Could not save cover cache:', e);
-            }
-        }
 
-        // Fetches covers for any game IDs not already in the cache, in
-        // batches, and merges the results back into (and returns) the cache.
-        async function fetchMissingCovers(allIds, cache) {
-            const missing = [...new Set(allIds)].filter(id => id != null && !(id in cache));
-            if (!missing.length) return cache;
-
-            for (let i = 0; i < missing.length; i += COVER_BATCH_SIZE) {
-                const batch = missing.slice(i, i + COVER_BATCH_SIZE);
-                try {
-                    const response = await fetch(`${COVER_ART_URL}?ids=${batch.join(',')}`);
-                    const data = await response.json();
-                    if (data && data.covers) {
-                        Object.assign(cache, data.covers);
-                    }
-                } catch (e) {
-                    console.warn('Cover art batch failed:', e);
-                    // Continue with remaining batches even if one fails.
-                }
-            }
-
-            saveCoverCache(cache);
-            return cache;
-        }
-
-        // --- LOAD + PARSE ---------------------------------------------------
-        async function loadGames() {
-            const content = document.getElementById('content');
-            content.innerHTML = '<div class="loading">Loading Index...</div>';
-            try {
-                const response = await fetch(`${CSV_URL}?_cb=${Date.now()}`);
-                if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
-                const csvText = await response.text();
-                const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
-
-                const gamesByYear = {};
-
-                parsed.data.forEach(row => {
-                    if (isBlacklistedCategory(row.category)) return;
-
-                    const year = extractEarliestYear(row.release_date);
-                    if (!year) return;
-
-                    const ratingRaw = row.rating ? row.rating.trim() : '';
-                    const rating = ratingRaw !== '' ? parseFloat(ratingRaw) : null;
-
-                    const gameId = row.id ? parseInt(row.id, 10) : null;
-
-                    const game = {
-                        id: (gameId !== null && !isNaN(gameId)) ? gameId : null,
-                        name: row.game,
-                        url: row.url,
-                        rating: (rating !== null && !isNaN(rating)) ? rating : null,
-                        platforms: parseJsonArrayField(row.platforms)
-                    };
-
-                    if (!gamesByYear[year]) gamesByYear[year] = [];
-                    gamesByYear[year].push(game);
-                });
-
-                // Sort each year: rated games descending by rating; unrated
-                // games pushed to the bottom, left in their original (CSV) order.
-                Object.keys(gamesByYear).forEach(year => {
-                    gamesByYear[year].sort((a, b) => {
-                        if (a.rating === null && b.rating === null) return 0;
-                        if (a.rating === null) return 1;
-                        if (b.rating === null) return -1;
-                        return b.rating - a.rating;
-                    });
-                });
-
-                window.__gamesByYear = gamesByYear;
-                populateYearDropdown(Object.keys(gamesByYear).map(Number));
-
-                const select = document.getElementById('yearSelect');
-
-                // Render immediately without covers so the list appears fast...
-                displayGames(gamesByYear[select.value] || []);
-
-                // ...then fetch any missing covers and re-render once they're in.
-                const allIds = Object.values(gamesByYear).flat().map(g => g.id);
-                window.__coverCache = await fetchMissingCovers(allIds, loadCoverCache());
-                displayGames(gamesByYear[select.value] || []);
-
-            } catch (e) {
-                console.error(e);
-                content.innerHTML = `<div class="loading" style="color:red">System Connection Error.</div>`;
-            }
-        }
-
-        function populateYearDropdown(years) {
-            const select = document.getElementById('yearSelect');
-            select.innerHTML = '';
-            years.sort((a, b) => b - a);
-            years.forEach(year => {
-                const opt = document.createElement('option');
-                opt.value = year; opt.textContent = year;
-                select.appendChild(opt);
-            });
-        }
-
-        function displayGames(gamesList) {
-            const content = document.getElementById('content');
-
-            if (!gamesList.length) {
-                content.innerHTML = '<div class="loading">No records found for this year.</div>';
-                return;
-            }
-
-            const grid = document.createElement('div');
-            grid.className = 'games-grid';
-
-            const coverCache = window.__coverCache || {};
-
-            gamesList.forEach((game, index) => {
-                const card = document.createElement('a');
-                card.className = 'game-card' + (index >= 5 ? ' below-top5' : '');
-                card.href = game.url || '#';
-                card.target = '_blank';
-                const imageId = game.id != null ? coverCache[game.id] : null;
-                const coverUrl = imageId ? `https://images.igdb.com/igdb/image/upload/t_cover_small/${imageId}.jpg` : '';
-                card.innerHTML = `
-                    <div class="game-rank">#${index + 1}</div>
-                    <div class="game-image-container">${coverUrl ? `<img class="game-image" src="${coverUrl}" alt="${escapeHtml(game.name)} cover">` : ''}</div>
-                    <div class="game-info">
-                        <div class="game-title">${escapeHtml(game.name)}</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">
-                            ${game.rating !== null
-                                ? `Rating: <span class="engagement-value">${game.rating.toFixed(1)}</span>`
-                                : '<span style="color:#aaa;">Unrated</span>'}
-                        </div>
-                        <div style="margin-top: 4px;">
-                            ${game.platforms.map(p => `<span class="platform-tag">${escapeHtml(abbreviatePlatform(p))}</span>`).join('')}
-                        </div>
-                    </div>`;
-                grid.appendChild(card);
-            });
-
-            content.innerHTML = '';
-            content.appendChild(grid);
-        }
-
-        document.getElementById('yearSelect').addEventListener('change', e => {
-            displayGames(window.__gamesByYear[e.target.value] || []);
-        });
-
-        loadGames();
-    </script>
-</body>
-</html>
+
+Claude is AI and can make mistakes. Please double-check responses.
+Pasted content
+51.91 KB •1,038 lines
+Formatting may be inconsistent from source
+<!DOCTYPE html><html lang="en"><head>    <meta charset="UTF-8">    <title>What Should Noiseredux Play?</title>    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />    <style>        :root {            --ps-blue: #003087;            --ps-blue-light: #0070cc;            --nin-red: #e4000f;            --bg: #f4f4f9;            --text: #111118;            --text-muted: #8888aa;        }        body { background-color: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; margin: 0; }        .container { max-width: 1200px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.05); }        header { background: linear-gradient(135deg, var(--ps-blue) 0%, #001a4d 100%); border-bottom: 4px solid var(--nin-red); padding: 3rem 1.5rem; text-align: center; }        header h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 7vw, 4.2rem); color: #fff; line-height: 0.9; text-transform: uppercase; margin: 0; }        .version-tag { font-size: 0.8rem; letter-spacing: 0.3em; text-transform: uppercase; color: #ffffff; opacity: 0.8; margin-top: 0.75rem; font-weight: 500; }        .controls { background: #e2e2ea; padding: 15px; display: flex; justify-content: center; align-items: center; gap: 15px; }        .controls select { padding: 8px 20px; font-weight: 700; border: 2px solid var(--ps-blue); border-radius: 4px; color: var(--ps-blue); cursor: pointer; }        .loading { text-align: center; padding: 80px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--ps-blue); }        .games-grid { display: flex; flex-direction: column; gap: 12px; padding: 30px; max-width: 900px; margin: 0 auto; }        .game-card { background: white; border: 1px solid #dcdce8; border-radius: 8px; display: flex; align-items: center; padding: 14px; gap: 20px; text-decoration: none; color: inherit; transition: all 0.2s ease; }        .game-card:hover { transform: translateX(8px); border-color: var(--ps-blue-light); }        .game-rank { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--ps-blue); min-width: 65px; text-align: center; }        .game-image-container { width: 70px; height: 94px; background: #eee; border-radius: 4px; overflow: hidden; flex-shrink: 0; }        .game-image { width: 100%; height: 100%; object-fit: cover; }        .game-title { font-weight: 700; font-size: 1.2rem; color: var(--text); }        .engagement-value { color: var(--nin-red); font-weight: 700; }        .platform-tag { background: #edf2f7; color: #4a5568; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #cbd5e0; }        footer { padding: 50px; text-align: center; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid #e2e2ea; }    </style></head><body>    <div class="container">        <header>            <h1>What Should Noiseredux Play?</h1>            <p class="version-tag">Version 7.9.6</p>        </header>        <div class="controls">            <label>Select Year:</label>            <select id="yearSelect"></select>        </div>
