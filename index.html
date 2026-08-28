@@ -58,7 +58,7 @@
         // page — the blob page serves HTML with no CORS headers, so fetch()
         // will fail with an "Access-Control-Allow-Origin" error like the one
         // above.
-        const CSV_URL = 'https://raw.githubusercontent.com/noiseredux/test-channel/main/want-to-play.csv';
+        const CSV_URL = 'https://raw.githubusercontent.com/noiseredux/whatshouldnoisereduxplay/main/want-to-play.csv';
 
         const COVER_ART_URL = 'https://script.google.com/macros/s/AKfycbyUhqm3gLlqzSrK-tfxB-uHfTbUBfUwYiHxLmMJqeBPiADBHta1Eg2QUi-1UPtpZkrD/exec';
 
@@ -127,12 +127,11 @@
             return CATEGORY_BLACKLIST.includes(category.trim().toLowerCase());
         }
 
-        // --- COVER ART + SCORES ----------------------------------------------
-        // Cover art rarely changes for a given game, so image IDs are cached
-        // indefinitely in localStorage and only re-requested for IDs the cache
-        // hasn't seen before. total_rating, however, shifts as new reviews
-        // come in — it's never persisted, and is re-fetched fresh every load
-        // for every game so rankings stay current.
+        // --- COVER ART -------------------------------------------------------
+        // Cache shape in localStorage: { "348977": "abc123", ... } mapping
+        // IGDB game ID -> IGDB cover image_id. Covers essentially never change
+        // for a given game, so once fetched they're kept indefinitely and only
+        // re-requested for IDs the cache hasn't seen before.
         function loadCoverCache() {
             try {
                 const raw = localStorage.getItem(COVER_CACHE_KEY);
@@ -152,52 +151,28 @@
             }
         }
 
-        // Fetches cover + total_rating data for every given game ID (in
-        // batches). Cover IDs are merged into the persistent cache and
-        // returned; total_rating is returned separately and never cached, so
-        // it's always current.
-        async function fetchGameData(allIds, coverCache) {
-            const ids = [...new Set(allIds)].filter(id => id != null);
-            const scores = {};
+        // Fetches covers for any game IDs not already in the cache, in
+        // batches, and merges the results back into (and returns) the cache.
+        async function fetchMissingCovers(allIds, cache) {
+            const missing = [...new Set(allIds)].filter(id => id != null && !(id in cache));
+            if (!missing.length) return cache;
 
-            for (let i = 0; i < ids.length; i += COVER_BATCH_SIZE) {
-                const batch = ids.slice(i, i + COVER_BATCH_SIZE);
+            for (let i = 0; i < missing.length; i += COVER_BATCH_SIZE) {
+                const batch = missing.slice(i, i + COVER_BATCH_SIZE);
                 try {
                     const response = await fetch(`${COVER_ART_URL}?ids=${batch.join(',')}`);
                     const data = await response.json();
-                    if (data && data.games) {
-                        Object.entries(data.games).forEach(([id, info]) => {
-                            if (info.cover) coverCache[id] = info.cover;
-                            scores[id] = (typeof info.totalRating === 'number') ? info.totalRating : null;
-                        });
+                    if (data && data.covers) {
+                        Object.assign(cache, data.covers);
                     }
                 } catch (e) {
-                    console.warn('Game data batch failed:', e);
+                    console.warn('Cover art batch failed:', e);
                     // Continue with remaining batches even if one fails.
                 }
             }
 
-            saveCoverCache(coverCache);
-            return { coverCache, scores };
-        }
-
-        // Sorts a year's games by total_rating (falling back to the CSV's
-        // community rating if a game's total_rating isn't available yet or
-        // IGDB has none on file), pushing fully unrated games to the bottom
-        // in their original CSV order.
-        function sortByScore(games, scores) {
-            const effectiveRating = (game) => {
-                const s = scores ? scores[game.id] : undefined;
-                if (typeof s === 'number') return s;
-                return game.rating; // fallback: CSV community rating, or null
-            };
-            games.sort((a, b) => {
-                const ra = effectiveRating(a), rb = effectiveRating(b);
-                if (ra === null && rb === null) return 0;
-                if (ra === null) return 1;
-                if (rb === null) return -1;
-                return rb - ra;
-            });
+            saveCoverCache(cache);
+            return cache;
         }
 
         // --- LOAD + PARSE ---------------------------------------------------
@@ -235,11 +210,15 @@
                     gamesByYear[year].push(game);
                 });
 
-                // Provisional sort using the CSV's community rating, just for
-                // the fast first paint below — superseded once total_rating
-                // scores come back from IGDB.
+                // Sort each year: rated games descending by rating; unrated
+                // games pushed to the bottom, left in their original (CSV) order.
                 Object.keys(gamesByYear).forEach(year => {
-                    sortByScore(gamesByYear[year], null);
+                    gamesByYear[year].sort((a, b) => {
+                        if (a.rating === null && b.rating === null) return 0;
+                        if (a.rating === null) return 1;
+                        if (b.rating === null) return -1;
+                        return b.rating - a.rating;
+                    });
                 });
 
                 window.__gamesByYear = gamesByYear;
@@ -247,18 +226,12 @@
 
                 const select = document.getElementById('yearSelect');
 
-                // Render immediately using CSV community ratings so the list
-                // appears fast...
+                // Render immediately without covers so the list appears fast...
                 displayGames(gamesByYear[select.value] || []);
 
-                // ...then fetch fresh IGDB total_rating scores (+ any missing
-                // covers) and re-sort/re-render once they're in.
+                // ...then fetch any missing covers and re-render once they're in.
                 const allIds = Object.values(gamesByYear).flat().map(g => g.id);
-                const { coverCache, scores } = await fetchGameData(allIds, loadCoverCache());
-                window.__coverCache = coverCache;
-                window.__scores = scores;
-
-                Object.values(gamesByYear).forEach(yearGames => sortByScore(yearGames, scores));
+                window.__coverCache = await fetchMissingCovers(allIds, loadCoverCache());
                 displayGames(gamesByYear[select.value] || []);
 
             } catch (e) {
@@ -290,7 +263,6 @@
             grid.className = 'games-grid';
 
             const coverCache = window.__coverCache || {};
-            const scores = window.__scores || null;
 
             gamesList.forEach((game, index) => {
                 const card = document.createElement('a');
@@ -299,19 +271,14 @@
                 card.target = '_blank';
                 const imageId = game.id != null ? coverCache[game.id] : null;
                 const coverUrl = imageId ? `https://images.igdb.com/igdb/image/upload/t_cover_small/${imageId}.jpg` : '';
-
-                const fetchedScore = (scores && game.id != null) ? scores[game.id] : undefined;
-                const displayScore = (typeof fetchedScore === 'number') ? fetchedScore : game.rating;
-                const scoreLabel = (typeof fetchedScore === 'number') ? 'Score' : 'Rating'; // "Score" = IGDB total_rating, "Rating" = provisional CSV value
-
                 card.innerHTML = `
                     <div class="game-rank">#${index + 1}</div>
                     <div class="game-image-container">${coverUrl ? `<img class="game-image" src="${coverUrl}" alt="${escapeHtml(game.name)} cover">` : ''}</div>
                     <div class="game-info">
                         <div class="game-title">${escapeHtml(game.name)}</div>
                         <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">
-                            ${displayScore !== null && displayScore !== undefined
-                                ? `${scoreLabel}: <span class="engagement-value">${displayScore.toFixed(1)}</span>`
+                            ${game.rating !== null
+                                ? `Rating: <span class="engagement-value">${game.rating.toFixed(1)}</span>`
                                 : '<span style="color:#aaa;">Unrated</span>'}
                         </div>
                         <div style="margin-top: 4px;">
