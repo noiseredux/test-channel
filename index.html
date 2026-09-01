@@ -57,18 +57,12 @@
         // page — the blob page serves HTML with no CORS headers, so fetch()
         // will fail with an "Access-Control-Allow-Origin" error like the one
         // above.
-        const CSV_URL = 'https://raw.githubusercontent.com/noiseredux/test-channel/main/want-to-play.csv';
+        const CSV_URL = 'https://raw.githubusercontent.com/noiseredux/whatshouldnoisereduxplay/main/want-to-play.csv';
 
         const COVER_ART_URL = 'https://script.google.com/macros/s/AKfycbyUhqm3gLlqzSrK-tfxB-uHfTbUBfUwYiHxLmMJqeBPiADBHta1Eg2QUi-1UPtpZkrD/exec';
 
         const COVER_CACHE_KEY = 'noiseredux_cover_cache_v1';
         const COVER_BATCH_SIZE = 100; // keep query-string length safely small per request
-
-        // IGDB categories to exclude (DLC, expansions, bundles, etc.) — matched
-        // case-insensitively against the CSV's "category" column.
-        const CATEGORY_BLACKLIST = [
-            'dlc', 'expansion', 'bundle', 'standalone expansion', 'mod', 'episode', 'season'
-        ];
 
         // Preferred-platform whitelist, matched against the CSV's platform
         // *name* strings (the CSV has no numeric IGDB platform IDs to match
@@ -166,11 +160,6 @@
             return Math.min(...matches.map(Number));
         }
 
-        function isBlacklistedCategory(category) {
-            if (!category) return false;
-            return CATEGORY_BLACKLIST.includes(category.trim().toLowerCase());
-        }
-
         // --- COVER ART -------------------------------------------------------
         // Cache shape in localStorage: { "348977": "abc123", ... } mapping
         // IGDB game ID -> IGDB cover image_id. Covers essentially never change
@@ -232,8 +221,6 @@
                 const gamesByYear = {};
 
                 parsed.data.forEach(row => {
-                    if (isBlacklistedCategory(row.category)) return;
-
                     const year = extractEarliestYear(row.release_date);
                     if (!year) return;
 
