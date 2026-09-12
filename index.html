@@ -38,7 +38,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 10.2.0</p>
+            <p class="version-tag">Version 11.0.0</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -60,35 +60,32 @@
         // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
         const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
 
-        // --- v10.2.0 scoring engine ---
-        // Everything from the old hype/multiplier system (platform boosts,
-        // publisher/developer affiliate lists, franchise IP boosts, sport/
-        // mainstream/major-league multipliers, Critical Darling percentile
-        // blend, etc.) has been removed. This version ranks on user score
-        // and critic score, confidence-weighted by review volume.
+        // --- v11.0.0 scoring engine ---
+        // Reverted the confidence threshold back to a static value (v10.3's
+        // per-year median made the threshold too easy to clear in naturally
+        // sparse years, over-trusting thin-evidence games — static 100
+        // scored better in practice).
         //
-        // v10.1.0 bug (fixed here): quality was reconstructed by averaging
-        // `rating` (user) and `aggregatedRating` (critic) ourselves. Those
-        // two sub-fields populate inconsistently relative to `reviews`
-        // (total_rating_count) — the same kind of mismatch already found
-        // with `aggregated_rating_count` reading 0 despite `aggregated_
-        // rating` having a real value. In practice a lot of older/retro
-        // games had real review volume in `reviews` but BOTH sub-fields
-        // came back empty, so computeQuality() returned null and those
-        // games were silently dropped from the ranking entirely — skewed
-        // hard against pre-2000s titles, since modern games are far more
-        // likely to have a populated critic score from press coverage.
+        // New in v11.0.0: Hype is back, redefined and much simpler than the
+        // old v9 multiplier system. Final score is now a straight average of
+        // two independent percentages:
         //
-        // Fix: use IGDB's own `totalRating` (total_rating) as the primary
-        // quality source. It's the actual figure `reviews` is describing,
-        // by IGDB's own definition, so it should be populated whenever
-        // there's real review volume — it doesn't depend on us correctly
-        // reconstructing a blend from two independently flaky sub-fields.
-        // `rating`/`aggregatedRating` are kept only as a fallback for the
-        // rare case totalRating itself is missing, and for the on-card
-        // breakdown display.
+        //   A) Review Score — confidence-weighted quality (user + critic),
+        //      exactly as in v10.2: reviews shrink toward BASELINE_RATING
+        //      until they clear REVIEW_PRIOR_COUNT.
+        //   B) Hype Score — (reviews + follows) for a game, expressed as a
+        //      PERCENTILE against every other game in that same year's pool.
+        //      A raw hype number is meaningless on its own (what does
+        //      "12,000" mean?); a percentile says "more anticipated/talked
+        //      about than X% of this year's games," which is comparable
+        //      year to year regardless of how big the raw numbers get.
         //
-        //   score = (reviews / (reviews + m)) * quality + (m / (reviews + m)) * baseline
+        //   Final Score = (A + B) / 2
+        //
+        // Games need a Review Score to be ranked at all (nothing to grade
+        // hype against otherwise); the Hype Score is computed only across
+        // that same eligible pool, so it isn't skewed by titles that got
+        // filtered out for having no reviews at all.
         const REVIEW_PRIOR_COUNT = 100;  // total reviews needed to be ~mostly trusted on its own
         const BASELINE_RATING = 70;      // neutral score assumed for a review-less/thin-evidence game
 
@@ -100,6 +97,24 @@
             if (hasUser) return game.rating;
             if (hasCritic) return game.aggregatedRating;
             return null;
+        }
+
+        // Percentile rank (0-100) of each value within `values`, i.e. what
+        // percentage of the pool this value is greater than or equal to.
+        // Ties share the same percentile. A single-item pool gets 100.
+        function computePercentiles(values) {
+            const n = values.length;
+            if (n <= 1) return values.map(() => 100);
+            const sorted = [...values].sort((a, b) => a - b);
+            return values.map(v => {
+                // count of values strictly less than v
+                let lo = 0, hi = n;
+                while (lo < hi) {
+                    const mid = (lo + hi) >> 1;
+                    if (sorted[mid] < v) lo = mid + 1; else hi = mid;
+                }
+                return (lo / (n - 1)) * 100;
+            });
         }
 
         function populateYearDropdown() {
@@ -128,21 +143,30 @@
             filtered.forEach(game => {
                 const quality = computeQuality(game);
                 if (quality === null) {
-                    game.final_score = null;
+                    game.review_score = null;
                     return;
                 }
                 const reviewCount = game.reviews || 0;
                 const confidence = reviewCount / (reviewCount + REVIEW_PRIOR_COUNT);
-                game.confidence = confidence;
-                game.final_score = confidence * quality + (1 - confidence) * BASELINE_RATING;
+                game.review_score = confidence * quality + (1 - confidence) * BASELINE_RATING;
             });
 
-            filtered = filtered.filter(game => game.final_score !== null);
+            // Only games with a review score are ranked at all — hype is
+            // graded relative to that same eligible pool, not the full
+            // unfiltered list, so titles with zero reviews can't skew it.
+            filtered = filtered.filter(game => game.review_score !== null);
 
             if (!filtered.length) {
                 content.innerHTML = '<div class="loading">No reviewed titles found for this year.</div>';
                 return;
             }
+
+            const hypeRaw = filtered.map(g => (g.reviews || 0) + (g.follows || 0));
+            const hypePercentiles = computePercentiles(hypeRaw);
+            filtered.forEach((game, i) => {
+                game.hype_score = hypePercentiles[i];
+                game.final_score = (game.review_score + game.hype_score) / 2;
+            });
 
             filtered.sort((a, b) => b.final_score - a.final_score);
 
@@ -168,6 +192,8 @@
                 }
                 const reviewCount = game.reviews || 0;
                 breakdownParts.push(`${reviewCount.toLocaleString()} review${reviewCount === 1 ? '' : 's'}`);
+                breakdownParts.push(`Review Score ${Math.round(game.review_score)}`);
+                breakdownParts.push(`Hype ${Math.round(game.hype_score)}`);
 
                 card.innerHTML = `
                     <div class="game-rank">#${index + 1}</div>
