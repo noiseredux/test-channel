@@ -38,7 +38,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 10.0.1</p>
+            <p class="version-tag">Version 10.1.0</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -60,45 +60,44 @@
         // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
         const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
 
-        // --- v10.0.1 scoring engine ---
+        // --- v10.1.0 scoring engine ---
         // Everything from the old hype/multiplier system (platform boosts,
         // publisher/developer affiliate lists, franchise IP boosts, sport/
         // mainstream/major-league multipliers, Critical Darling percentile
-        // blend, etc.) has been removed. This version ranks purely on user
-        // score and critic score, each confidence-weighted by how many
-        // reviews back it up, using the classic IMDb-style Bayesian average:
+        // blend, etc.) has been removed. This version ranks on user score
+        // and critic score, confidence-weighted by review volume.
         //
-        //   weighted = (count / (count + m)) * rating + (m / (count + m)) * baseline
+        // v10.0.x bug (fixed here): confidence was weighted per-axis using
+        // `rating_count` and `aggregated_rating_count`. In practice IGDB
+        // almost never populates `aggregated_rating_count` even when
+        // `aggregated_rating` itself has a real value (the v5.4.0 backend's
+        // own changelog flagged this same unreliability, which is why it
+        // never fetched that field to begin with). With the count reading
+        // as 0 for nearly every game, the "missing count" guard kicked in
+        // universally, treating almost the entire catalog as "1 review" and
+        // crushing every score toward the baseline regardless of whether
+        // the real rating was 88 or 71 — visible as dozens of games all
+        // landing at 71-72 with "(0)" review counts.
         //
-        // v10.0.0 bug (fixed here): `m` and the prior mean were computed
-        // from that same year's own pool of reviewed games. Early in a year
-        // (or in any sparse pool) the only titles with any reviews at all
-        // tend to be hyped, high-scoring releases — so the "mean" being
-        // shrunk toward was itself ~85-88, and a 2-review game barely moved
-        // (Love Eternal at 88/2 critic reviews was still landing at #1
-        // ahead of Resident Evil Requiem's 325 user + 6 critic reviews).
-        // Shrinking toward a biased, equally-thin sample doesn't buy real
-        // confidence discipline.
+        // Fix: use `total_rating_count` (the `reviews` field) as the single
+        // confidence measure instead. It's the one review-volume field that
+        // IGDB reliably populates — it's what the original v9 hype engine
+        // was built on, and what the backend already sorts by. Quality
+        // itself is the average of user rating and critic rating (whichever
+        // exist), then that quality figure is confidence-weighted by
+        // `reviews` using the same Bayesian shrinkage idea as before:
         //
-        // Fix: `m` (how many reviews it takes to be mostly trusted) and the
-        // baseline (what a totally unproven game is assumed to be worth) are
-        // now fixed constants, independent of any single year's sample size
-        // or composition. Critic review counts on IGDB run much lower than
-        // user counts even for fully-reviewed AAA titles, hence the lower
-        // critic threshold.
-        const CRITIC_PRIOR_COUNT = 15;   // critic reviews needed to be ~mostly trusted on its own
-        const USER_PRIOR_COUNT = 50;     // user ratings needed to be ~mostly trusted on its own
+        //   score = (reviews / (reviews + m)) * quality + (m / (reviews + m)) * baseline
+        const REVIEW_PRIOR_COUNT = 100;  // total reviews needed to be ~mostly trusted on its own
         const BASELINE_RATING = 70;      // neutral score assumed for a review-less/thin-evidence game
 
-        function weightedAxisScore(game, ratingKey, countKey, priorCount) {
-            // Guard against IGDB entries that carry a rating but a missing/zero
-            // count (a known data quirk) — treat as a single review rather than
-            // dropping real rating data.
-            const count = game[countKey] > 0 ? game[countKey] : (game[ratingKey] > 0 ? 1 : 0);
-            if (count <= 0) return null;
-            const confidence = count / (count + priorCount); // 0-1, how much to trust this axis's own number
-            const weighted = confidence * game[ratingKey] + (1 - confidence) * BASELINE_RATING;
-            return { weighted, confidence };
+        function computeQuality(game) {
+            const hasUser = (game.rating || 0) > 0;
+            const hasCritic = (game.aggregatedRating || 0) > 0;
+            if (hasUser && hasCritic) return (game.rating + game.aggregatedRating) / 2;
+            if (hasUser) return game.rating;
+            if (hasCritic) return game.aggregatedRating;
+            return null;
         }
 
         function populateYearDropdown() {
@@ -125,27 +124,15 @@
             }
 
             filtered.forEach(game => {
-                const userResult = weightedAxisScore(game, 'rating', 'ratingCount', USER_PRIOR_COUNT);
-                const criticResult = weightedAxisScore(game, 'aggregatedRating', 'aggregatedRatingCount', CRITIC_PRIOR_COUNT);
-
-                game.user_score = userResult ? userResult.weighted : null;
-                game.critic_score = criticResult ? criticResult.weighted : null;
-
-                // Blend the two axes by their own confidence rather than a
-                // flat 50/50 split, so an axis backed by hundreds of reviews
-                // properly outweighs one backed by a handful.
-                if (userResult && criticResult) {
-                    const totalConfidence = userResult.confidence + criticResult.confidence;
-                    game.final_score = totalConfidence > 0
-                        ? (userResult.weighted * userResult.confidence + criticResult.weighted * criticResult.confidence) / totalConfidence
-                        : (userResult.weighted + criticResult.weighted) / 2;
-                } else if (userResult) {
-                    game.final_score = userResult.weighted;
-                } else if (criticResult) {
-                    game.final_score = criticResult.weighted;
-                } else {
+                const quality = computeQuality(game);
+                if (quality === null) {
                     game.final_score = null;
+                    return;
                 }
+                const reviewCount = game.reviews || 0;
+                const confidence = reviewCount / (reviewCount + REVIEW_PRIOR_COUNT);
+                game.confidence = confidence;
+                game.final_score = confidence * quality + (1 - confidence) * BASELINE_RATING;
             });
 
             filtered = filtered.filter(game => game.final_score !== null);
@@ -168,12 +155,14 @@
                 const coverUrl = game.cover ? `https://images.igdb.com/igdb/image/upload/t_cover_small/${game.cover}.jpg` : '';
 
                 const breakdownParts = [];
-                if (game.user_score !== null) {
-                    breakdownParts.push(`User ${Math.round(game.user_score)} (${game.ratingCount || 0})`);
+                if ((game.rating || 0) > 0) {
+                    breakdownParts.push(`User ${Math.round(game.rating)}`);
                 }
-                if (game.critic_score !== null) {
-                    breakdownParts.push(`Critic ${Math.round(game.critic_score)} (${game.aggregatedRatingCount || 0})`);
+                if ((game.aggregatedRating || 0) > 0) {
+                    breakdownParts.push(`Critic ${Math.round(game.aggregatedRating)}`);
                 }
+                const reviewCount = game.reviews || 0;
+                breakdownParts.push(`${reviewCount.toLocaleString()} review${reviewCount === 1 ? '' : 's'}`);
 
                 card.innerHTML = `
                     <div class="game-rank">#${index + 1}</div>
