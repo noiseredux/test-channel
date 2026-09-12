@@ -38,7 +38,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 10.3.0</p>
+            <p class="version-tag">Version 10.2.0</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -89,32 +89,8 @@
         // breakdown display.
         //
         //   score = (reviews / (reviews + m)) * quality + (m / (reviews + m)) * baseline
-        //
-        // v10.2.0 used a static m = 100 for every year. That treats a niche
-        // 2003 release the same as a 2026 blockbuster, when what actually
-        // varies year to year is how much review volume is normal at all —
-        // an early-in-year or pre-2000s pool might typically top out at a
-        // few dozen reviews per game, while a mature, fully-released year
-        // might normally see thousands. A fixed threshold makes shrinkage
-        // either too harsh (starving every game in a naturally low-volume
-        // year) or too lax (barely shrinking anything in a high-volume one).
-        //
-        // Fix: m is now the MEDIAN review count among that year's reviewed
-        // games — so "trusted on its own" means "about as reviewed as a
-        // typical game this year," whatever that happens to be. Median
-        // rather than mean, since a single viral hit can otherwise drag the
-        // threshold up and over-punish everything else that year — the same
-        // small-sample bias already hit once before with the rating
-        // baseline itself (hence BASELINE_RATING staying a fixed constant).
-        const DEFAULT_REVIEW_PRIOR_COUNT = 100;  // fallback when a year has no review data to derive a median from
-        const BASELINE_RATING = 70;              // neutral score assumed for a review-less/thin-evidence game
-
-        function computeMedian(numbers) {
-            if (!numbers.length) return null;
-            const sorted = [...numbers].sort((a, b) => a - b);
-            const mid = Math.floor(sorted.length / 2);
-            return sorted.length % 2 !== 0 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
-        }
+        const REVIEW_PRIOR_COUNT = 100;  // total reviews needed to be ~mostly trusted on its own
+        const BASELINE_RATING = 70;      // neutral score assumed for a review-less/thin-evidence game
 
         function computeQuality(game) {
             if ((game.totalRating || 0) > 0) return game.totalRating;
@@ -149,10 +125,6 @@
                 return;
             }
 
-            const reviewCounts = filtered.map(g => g.reviews || 0).filter(c => c > 0);
-            const yearMedianReviews = computeMedian(reviewCounts);
-            const reviewPriorCount = (yearMedianReviews && yearMedianReviews > 0) ? yearMedianReviews : DEFAULT_REVIEW_PRIOR_COUNT;
-
             filtered.forEach(game => {
                 const quality = computeQuality(game);
                 if (quality === null) {
@@ -160,7 +132,7 @@
                     return;
                 }
                 const reviewCount = game.reviews || 0;
-                const confidence = reviewCount / (reviewCount + reviewPriorCount);
+                const confidence = reviewCount / (reviewCount + REVIEW_PRIOR_COUNT);
                 game.confidence = confidence;
                 game.final_score = confidence * quality + (1 - confidence) * BASELINE_RATING;
             });
