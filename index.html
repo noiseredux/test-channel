@@ -38,7 +38,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 10.0.0</p>
+            <p class="version-tag">Version 10.0.1</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -52,7 +52,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
 
         const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35];
         const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG' };
@@ -60,7 +60,7 @@
         // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
         const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
 
-        // --- v10.0.0 scoring engine ---
+        // --- v10.0.1 scoring engine ---
         // Everything from the old hype/multiplier system (platform boosts,
         // publisher/developer affiliate lists, franchise IP boosts, sport/
         // mainstream/major-league multipliers, Critical Darling percentile
@@ -68,40 +68,37 @@
         // score and critic score, each confidence-weighted by how many
         // reviews back it up, using the classic IMDb-style Bayesian average:
         //
-        //   weighted = (count / (count + m)) * rating + (m / (count + m)) * mean
+        //   weighted = (count / (count + m)) * rating + (m / (count + m)) * baseline
         //
-        // `m` and `mean` are computed per year, from that year's own pool of
-        // games that have at least one review on the given axis — so a game
-        // with very few reviews gets pulled hard toward that year's average,
-        // while a game with thousands of reviews is trusted almost entirely
-        // on its own number. This keeps a single glowing 5-review title from
-        // outranking a game with broad, sustained consensus.
+        // v10.0.0 bug (fixed here): `m` and the prior mean were computed
+        // from that same year's own pool of reviewed games. Early in a year
+        // (or in any sparse pool) the only titles with any reviews at all
+        // tend to be hyped, high-scoring releases — so the "mean" being
+        // shrunk toward was itself ~85-88, and a 2-review game barely moved
+        // (Love Eternal at 88/2 critic reviews was still landing at #1
+        // ahead of Resident Evil Requiem's 325 user + 6 critic reviews).
+        // Shrinking toward a biased, equally-thin sample doesn't buy real
+        // confidence discipline.
         //
-        // Final score = average of the user-weighted and critic-weighted
-        // scores when both exist; whichever one exists when only one does.
-        // Games with zero reviews on both axes carry no signal to rank on
-        // and are excluded entirely.
+        // Fix: `m` (how many reviews it takes to be mostly trusted) and the
+        // baseline (what a totally unproven game is assumed to be worth) are
+        // now fixed constants, independent of any single year's sample size
+        // or composition. Critic review counts on IGDB run much lower than
+        // user counts even for fully-reviewed AAA titles, hence the lower
+        // critic threshold.
+        const CRITIC_PRIOR_COUNT = 15;   // critic reviews needed to be ~mostly trusted on its own
+        const USER_PRIOR_COUNT = 50;     // user ratings needed to be ~mostly trusted on its own
+        const BASELINE_RATING = 70;      // neutral score assumed for a review-less/thin-evidence game
 
-        function computeAxisPrior(pool, ratingKey, countKey) {
-            const eligible = pool.filter(g => (g[countKey] || 0) > 0);
-            if (!eligible.length) return null;
-            const totalCount = eligible.reduce((sum, g) => sum + g[countKey], 0);
-            const totalRating = eligible.reduce((sum, g) => sum + g[ratingKey], 0);
-            return {
-                m: totalCount / eligible.length,      // avg review count that year, on this axis
-                mean: totalRating / eligible.length    // avg rating that year, on this axis
-            };
-        }
-
-        function weightedAxisScore(game, ratingKey, countKey, prior) {
-            if (!prior) return null;
+        function weightedAxisScore(game, ratingKey, countKey, priorCount) {
             // Guard against IGDB entries that carry a rating but a missing/zero
             // count (a known data quirk) — treat as a single review rather than
             // dropping real rating data.
             const count = game[countKey] > 0 ? game[countKey] : (game[ratingKey] > 0 ? 1 : 0);
             if (count <= 0) return null;
-            const { m, mean } = prior;
-            return (count / (count + m)) * game[ratingKey] + (m / (count + m)) * mean;
+            const confidence = count / (count + priorCount); // 0-1, how much to trust this axis's own number
+            const weighted = confidence * game[ratingKey] + (1 - confidence) * BASELINE_RATING;
+            return { weighted, confidence };
         }
 
         function populateYearDropdown() {
@@ -127,19 +124,25 @@
                 return;
             }
 
-            const userPrior = computeAxisPrior(filtered, 'rating', 'ratingCount');
-            const criticPrior = computeAxisPrior(filtered, 'aggregatedRating', 'aggregatedRatingCount');
-
             filtered.forEach(game => {
-                game.user_score = weightedAxisScore(game, 'rating', 'ratingCount', userPrior);
-                game.critic_score = weightedAxisScore(game, 'aggregatedRating', 'aggregatedRatingCount', criticPrior);
+                const userResult = weightedAxisScore(game, 'rating', 'ratingCount', USER_PRIOR_COUNT);
+                const criticResult = weightedAxisScore(game, 'aggregatedRating', 'aggregatedRatingCount', CRITIC_PRIOR_COUNT);
 
-                if (game.user_score !== null && game.critic_score !== null) {
-                    game.final_score = (game.user_score + game.critic_score) / 2;
-                } else if (game.user_score !== null) {
-                    game.final_score = game.user_score;
-                } else if (game.critic_score !== null) {
-                    game.final_score = game.critic_score;
+                game.user_score = userResult ? userResult.weighted : null;
+                game.critic_score = criticResult ? criticResult.weighted : null;
+
+                // Blend the two axes by their own confidence rather than a
+                // flat 50/50 split, so an axis backed by hundreds of reviews
+                // properly outweighs one backed by a handful.
+                if (userResult && criticResult) {
+                    const totalConfidence = userResult.confidence + criticResult.confidence;
+                    game.final_score = totalConfidence > 0
+                        ? (userResult.weighted * userResult.confidence + criticResult.weighted * criticResult.confidence) / totalConfidence
+                        : (userResult.weighted + criticResult.weighted) / 2;
+                } else if (userResult) {
+                    game.final_score = userResult.weighted;
+                } else if (criticResult) {
+                    game.final_score = criticResult.weighted;
                 } else {
                     game.final_score = null;
                 }
