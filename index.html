@@ -38,7 +38,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 10.1.0</p>
+            <p class="version-tag">Version 10.2.0</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -52,7 +52,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
 
         const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35];
         const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG' };
@@ -60,38 +60,40 @@
         // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
         const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
 
-        // --- v10.1.0 scoring engine ---
+        // --- v10.2.0 scoring engine ---
         // Everything from the old hype/multiplier system (platform boosts,
         // publisher/developer affiliate lists, franchise IP boosts, sport/
         // mainstream/major-league multipliers, Critical Darling percentile
         // blend, etc.) has been removed. This version ranks on user score
         // and critic score, confidence-weighted by review volume.
         //
-        // v10.0.x bug (fixed here): confidence was weighted per-axis using
-        // `rating_count` and `aggregated_rating_count`. In practice IGDB
-        // almost never populates `aggregated_rating_count` even when
-        // `aggregated_rating` itself has a real value (the v5.4.0 backend's
-        // own changelog flagged this same unreliability, which is why it
-        // never fetched that field to begin with). With the count reading
-        // as 0 for nearly every game, the "missing count" guard kicked in
-        // universally, treating almost the entire catalog as "1 review" and
-        // crushing every score toward the baseline regardless of whether
-        // the real rating was 88 or 71 — visible as dozens of games all
-        // landing at 71-72 with "(0)" review counts.
+        // v10.1.0 bug (fixed here): quality was reconstructed by averaging
+        // `rating` (user) and `aggregatedRating` (critic) ourselves. Those
+        // two sub-fields populate inconsistently relative to `reviews`
+        // (total_rating_count) — the same kind of mismatch already found
+        // with `aggregated_rating_count` reading 0 despite `aggregated_
+        // rating` having a real value. In practice a lot of older/retro
+        // games had real review volume in `reviews` but BOTH sub-fields
+        // came back empty, so computeQuality() returned null and those
+        // games were silently dropped from the ranking entirely — skewed
+        // hard against pre-2000s titles, since modern games are far more
+        // likely to have a populated critic score from press coverage.
         //
-        // Fix: use `total_rating_count` (the `reviews` field) as the single
-        // confidence measure instead. It's the one review-volume field that
-        // IGDB reliably populates — it's what the original v9 hype engine
-        // was built on, and what the backend already sorts by. Quality
-        // itself is the average of user rating and critic rating (whichever
-        // exist), then that quality figure is confidence-weighted by
-        // `reviews` using the same Bayesian shrinkage idea as before:
+        // Fix: use IGDB's own `totalRating` (total_rating) as the primary
+        // quality source. It's the actual figure `reviews` is describing,
+        // by IGDB's own definition, so it should be populated whenever
+        // there's real review volume — it doesn't depend on us correctly
+        // reconstructing a blend from two independently flaky sub-fields.
+        // `rating`/`aggregatedRating` are kept only as a fallback for the
+        // rare case totalRating itself is missing, and for the on-card
+        // breakdown display.
         //
         //   score = (reviews / (reviews + m)) * quality + (m / (reviews + m)) * baseline
         const REVIEW_PRIOR_COUNT = 100;  // total reviews needed to be ~mostly trusted on its own
         const BASELINE_RATING = 70;      // neutral score assumed for a review-less/thin-evidence game
 
         function computeQuality(game) {
+            if ((game.totalRating || 0) > 0) return game.totalRating;
             const hasUser = (game.rating || 0) > 0;
             const hasCritic = (game.aggregatedRating || 0) > 0;
             if (hasUser && hasCritic) return (game.rating + game.aggregatedRating) / 2;
@@ -160,6 +162,9 @@
                 }
                 if ((game.aggregatedRating || 0) > 0) {
                     breakdownParts.push(`Critic ${Math.round(game.aggregatedRating)}`);
+                }
+                if (!breakdownParts.length && (game.totalRating || 0) > 0) {
+                    breakdownParts.push(`Blended ${Math.round(game.totalRating)}`);
                 }
                 const reviewCount = game.reviews || 0;
                 breakdownParts.push(`${reviewCount.toLocaleString()} review${reviewCount === 1 ? '' : 's'}`);
