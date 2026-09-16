@@ -37,7 +37,6 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <p class="version-tag">Version 9.1.2 (TEST — 80/20 blend)</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -45,16 +44,17 @@
         </div>
         <div id="content"></div>
         <footer>
-            Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
-            A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy.
+            V9.3.0 &nbsp;·&nbsp; Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
+            A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
+            <span class="version-tag" style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.6;">Version 9.2.0</span>
         </footer>
     </div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
 
-        const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35];
-        const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG' };
+        const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35, 3];
+        const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG', 3: 'LNX' };
 
         // --- Scoring constants ---
         const GENRE_SPORT_ID = 14;
@@ -71,7 +71,7 @@
         // project philosophy as of this version, so the 2.2x figure is calibrated
         // against the real, current scoring behavior rather than a hypothetical
         // unstacked baseline. Supersedes the 1.75x ratio from v7.4.1.
-        const NINTENDO_AFFILIATED_MULTIPLIER = 11.25;
+        const NINTENDO_AFFILIATED_MULTIPLIER = 8.25;
         const SONY_AFFILIATED_MULTIPLIER = 3.75;
 
         // v7.0.1: Pillar third-party boost — Square, Enix, Capcom, Konami.
@@ -836,10 +836,9 @@
         // project owner: if the percentile-blend results don't look right
         // against real data, revert to v8.2.0 (or v8.1.0) and go back to
         // tuning the multiplier-based Critical Darling boost instead.
-        // v9.1.2 TEST: trying 80/20, continuing the walk from 60/40 -> 70/30
-        // as Splatoon-style hype-heavy franchises kept landing lower than gut
-        // expectation. Checking whether 80/20 finally lands them top 10-20,
-        // or whether the gap points to a data issue instead (see 70/30 notes).
+        // v9.2.0: promoted to live default after A/B testing 50/50, 70/30,
+        // and 80/20 against 60/40 — 80/20 best matched gut expectations for
+        // hype-heavy franchise titles (e.g. Splatoon) landing top 10-20.
         const HYPE_WEIGHT = 0.8;
         const QUALITY_WEIGHT = 0.2;
 
