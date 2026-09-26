@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.4.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.4.1</span>
         </footer>
     </div>
 
@@ -72,10 +72,23 @@
         // See isConfirmedSteamTitle() below for the gating logic, and the
         // platform-tag rendering in displayGames() for where it's shown as
         // STM rather than a generic PC label.
+        //
+        // v9.4.1: dropped the platforms.includes(WINDOWS_PLATFORM_ID) half of
+        // this check. The actual signal of interest was always "does IGDB
+        // confirm a Steam App ID," not "is this tagged Windows" — the two
+        // aren't guaranteed to co-occur, since IGDB's platform tagging can be
+        // incomplete for a title even when its external.steam match is solid
+        // (the same kind of data-sparsity gap the WonderSwan/CDi/VB
+        // corrections above exist to work around). Requiring both was an
+        // unnecessary second gate that could silently exclude a
+        // Steam-confirmed title over incomplete platform metadata. Now gated
+        // on steamAppId alone. WINDOWS_PLATFORM_ID is kept only for the
+        // platform-tag rendering lookup (PLATFORM_NAMES[6] = 'STM'), not for
+        // filtering.
         const WINDOWS_PLATFORM_ID = 6;
 
         function isConfirmedSteamTitle(game) {
-            return game.platforms.includes(WINDOWS_PLATFORM_ID) && !!game.steamAppId;
+            return !!game.steamAppId;
         }
 
         const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35, 3];
@@ -1126,7 +1139,7 @@
                             Score: <span class="engagement-value">${game.hype_score}</span>
                         </div>
                         <div style="margin-top: 4px;">
-                            ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id) || (id === WINDOWS_PLATFORM_ID && isConfirmedSteamTitle(game))).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}
+                            ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}${isConfirmedSteamTitle(game) ? `<span class="platform-tag">${PLATFORM_NAMES[WINDOWS_PLATFORM_ID]}</span>` : ''}
                         </div>
                     </div>`;
                 grid.appendChild(card);
