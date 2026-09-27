@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.4.1</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.5.0-TEST</span>
         </footer>
     </div>
 
@@ -1099,21 +1099,44 @@
             // filtered pool only.
             const hypePercentiles = computePercentiles(filtered, g => g.hype_score_raw);
 
+            // v9.5.0-TEST: critic (IGDB) and Steam are ranked as two SEPARATE
+            // percentiles, each against only the games that actually have
+            // that data — not mixed into one shared ranking. Averaging two
+            // differently-shaped raw scales (critic scores span the full
+            // 0-100 range; Steam's % positive is usually bunched 70-95%)
+            // before ranking would let Steam's tighter distribution quietly
+            // skew things. Ranking each separately, then averaging the
+            // resulting PERCENTILES per game in Pass 3, avoids that.
             const criticEligible = filtered.filter(g => (g.aggregatedRating || 0) > 0);
             const criticPercentiles = computePercentiles(criticEligible, g => g.aggregatedRating);
 
-            // --- Pass 3: blend. Games with no critic data get their full
-            // weight redistributed to the hype axis rather than being
-            // penalized to a 0 criticPercentile — most retro/niche titles
-            // have no aggregated_rating in IGDB at all, and treating "no
-            // critic coverage" the same as "critics hated it" would bury
-            // the majority of the catalog for a data-availability reason,
-            // not a quality one.
+            const steamEligible = filtered.filter(g => g.steamReviewScore != null);
+            const steamPercentiles = computePercentiles(steamEligible, g => g.steamReviewScore);
+
+            // --- Pass 3: blend. A game's quality percentile is the average
+            // of whichever of {criticPercentile, steamPercentile} it has —
+            // both if both exist, just one if only one exists. A game with
+            // NEITHER gets its full weight redistributed to the hype axis
+            // rather than being penalized to a 0 quality percentile — most
+            // retro/niche titles have no aggregated_rating in IGDB and
+            // aren't on Steam at all, and treating "no critic coverage" the
+            // same as "critics hated it" would bury the majority of the
+            // catalog for a data-availability reason, not a quality one.
             filtered.forEach(game => {
                 const hypePct = hypePercentiles.get(game) || 0;
-                if (criticPercentiles.has(game)) {
-                    const criticPct = criticPercentiles.get(game);
-                    game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (criticPct * QUALITY_WEIGHT));
+                const hasCritic = criticPercentiles.has(game);
+                const hasSteam = steamPercentiles.has(game);
+
+                if (hasCritic || hasSteam) {
+                    let qualityPct;
+                    if (hasCritic && hasSteam) {
+                        qualityPct = (criticPercentiles.get(game) + steamPercentiles.get(game)) / 2;
+                    } else if (hasCritic) {
+                        qualityPct = criticPercentiles.get(game);
+                    } else {
+                        qualityPct = steamPercentiles.get(game);
+                    }
+                    game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (qualityPct * QUALITY_WEIGHT));
                 } else {
                     game.hype_score = Math.round(hypePct);
                 }
