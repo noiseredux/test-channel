@@ -29,18 +29,17 @@
         .game-image { width: 100%; height: 100%; object-fit: cover; }
         .game-title { font-weight: 700; font-size: 1.2rem; color: var(--text); }
         .engagement-value { color: var(--nin-red); font-weight: 700; }
-        .review-count { color: var(--text-muted); }
         .platform-tag { background: #edf2f7; color: #4a5568; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #cbd5e0; }
         footer { padding: 50px; text-align: center; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid #e2e2ea; }
-        .vanilla-banner { background: #e7f1ff; color: #003087; text-align: center; padding: 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid #b6d4ff; }
+        .vanilla-banner { background: #fff3cd; color: #664d03; text-align: center; padding: 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid #ffe69c; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="vanilla-banner">Weighted Score Build — User + Critic Rating, Confidence-Weighted by Review Count</div>
+        <div class="vanilla-banner">Pure Hype Build — Reviews / Follows / Hypes Only — No Rating Data Used</div>
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <div class="version-tag">Weighted Score Build · v13.1.0</div>
+            <div class="version-tag">Pure Hype Build · v14.0.0</div>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -50,32 +49,21 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 13.1.0 — Bayesian-weighted total_rating build, backend v5.9.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 14.0.0 — pure engagement/hype build, backend v5.10.0</span>
         </footer>
     </div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
 
-        // --- v13.0.0: WEIGHTED SCORE BUILD ---
-        // No hype/multiplier logic. Score is IGDB's own blended user+critic
-        // score (`totalRating`) run through a Bayesian average against
-        // `reviews` (review count), so games with more ratings are trusted
-        // closer to their own score, and games with few ratings get pulled
-        // toward that year's average:
-        //
-        //   weighted = (v / (v + m)) * R + (m / (v + m)) * C
-        //
-        //   R = game's totalRating
-        //   v = game's reviews (total_rating_count)
-        //   C = mean totalRating across this year's eligible games
-        //   m = mean reviews across this year's eligible games
-        //
-        // Steam confirmation: backend v5.9.0 restores external_games /
-        // steamAppId (dropped in v5.8.0's field trim), so
-        // isConfirmedSteamTitle() is live again — a PC title is only
-        // admitted when IGDB confirms a Steam App ID for it, rendered as
-        // an "STM" tag rather than a generic PC label.
+        // --- v14.0.0: PURE HYPE BUILD ---
+        // Scoring is engagement-only: (reviews * 3) + follows + hypes.
+        // `totalRating`, `rating`, and `aggregatedRating` are all still
+        // present on the game object (backend v5.10.0 sends them), but this
+        // build reads none of them â€” review/critic scores are entirely out
+        // of the equation, same lineage as the v12 "vanilla" build but with
+        // hypes back in the mix now that the backend provides it again.
+        // No multipliers, no franchise boosts, no Bayesian weighting.
         const WINDOWS_PLATFORM_ID = 6;
 
         function isConfirmedSteamTitle(game) {
@@ -97,15 +85,6 @@
             }
         }
 
-        // Computes the year's prior mean rating (C) and prior mean review
-        // count (m) across all eligible (rated) games, for the Bayesian blend.
-        function computeYearStats(games) {
-            if (!games.length) return { C: 0, m: 0 };
-            const C = games.reduce((sum, g) => sum + g.totalRating, 0) / games.length;
-            const m = games.reduce((sum, g) => sum + (g.reviews || 0), 0) / games.length;
-            return { C, m };
-        }
-
         function displayGames(gamesList) {
             const content = document.getElementById('content');
 
@@ -115,23 +94,17 @@
                 return isCorrectPlatform && !isBlacklistedCategory;
             });
 
-            // Only games with an actual IGDB total_rating can be scored —
-            // there's nothing to weigh for a game with no rating at all.
-            filtered = filtered.filter(game => (game.totalRating || 0) > 0);
+            // Pure engagement score. No rating data, no multipliers.
+            filtered.forEach(game => {
+                game.hype_score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0);
+            });
+
+            filtered = filtered.filter(game => game.hype_score > 0);
 
             if (!filtered.length) {
                 content.innerHTML = '<div class="loading">No records found for this year.</div>';
                 return;
             }
-
-            const { C, m } = computeYearStats(filtered);
-
-            filtered.forEach(game => {
-                const v = game.reviews || 0;
-                const R = game.totalRating;
-                const denom = v + m;
-                game.hype_score = denom > 0 ? Math.round(((v / denom) * R) + ((m / denom) * C)) : Math.round(R);
-            });
 
             filtered.sort((a, b) => b.hype_score - a.hype_score);
 
@@ -151,8 +124,6 @@
                         <div class="game-title">${game.name}</div>
                         <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
                             Score: <span class="engagement-value">${game.hype_score}</span>
-                            &nbsp;·&nbsp;
-                            <span class="review-count">${game.reviews} review${game.reviews === 1 ? '' : 's'}</span>
                         </div>
                         <div style="margin-top: 4px;">
                             ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}${isConfirmedSteamTitle(game) ? `<span class="platform-tag">${PLATFORM_NAMES[WINDOWS_PLATFORM_ID]}</span>` : ''}
