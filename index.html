@@ -37,6 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
+            <p class="version-tag">Version 8.3.0</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -45,46 +46,35 @@
         <div id="content"></div>
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
-            A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.5.0-TEST</span>
+            A personal hype index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy.
         </footer>
     </div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
 
-        // v9.3.0: Linux (platform 3, IGDB's 'LNX') added to the allowlist.
-        // Rationale: the PS2 Linux Kit shipped in all regions, making PS2
-        // hardware a full Red Hat Linux machine out of the box; the PS3
-        // similarly shipped with OtherOS support, with Sony chiefly
-        // advertising the Yellow Dog Linux variant. Both make Linux — Red Hat,
-        // Yellow Dog, and derivatives like Fedora specifically — part of the
-        // Sony console lineage under this project's mission, not a generic
-        // PC-platform inclusion.
+        // v9.3.0/v9.4.1 (ported from the live v9.x line): Linux (platform 3,
+        // IGDB's 'LNX') added to the allowlist. Rationale: the PS2 Linux Kit
+        // shipped in all regions, making PS2 hardware a full Red Hat Linux
+        // machine out of the box; the PS3 similarly shipped with OtherOS
+        // support, with Sony chiefly advertising the Yellow Dog Linux
+        // variant. Both make Linux — Red Hat, Yellow Dog, and derivatives
+        // like Fedora specifically — part of the Sony console lineage under
+        // this project's mission, not a generic PC-platform inclusion.
         //
-        // v9.4.0: PC (Microsoft Windows, platform 6) is intentionally NOT in
+        // PC (Microsoft Windows, platform 6) is intentionally NOT in
         // ALLOWED_PLATFORMS — admitting it outright would flood the index
         // with the entire PC catalog, unrelated to this project's
         // Sony/Nintendo/Apple lens. Instead, a PC title is admitted only when
-        // IGDB confirms a Steam App ID for it (via external.steam, fetched
-        // by the backend as of v5.5.0) — reflecting a personal Steam Deck-
-        // spec streaming box as the actual play surface, not "any PC game."
-        // See isConfirmedSteamTitle() below for the gating logic, and the
-        // platform-tag rendering in displayGames() for where it's shown as
-        // STM rather than a generic PC label.
-        //
-        // v9.4.1: dropped the platforms.includes(WINDOWS_PLATFORM_ID) half of
-        // this check. The actual signal of interest was always "does IGDB
-        // confirm a Steam App ID," not "is this tagged Windows" — the two
-        // aren't guaranteed to co-occur, since IGDB's platform tagging can be
-        // incomplete for a title even when its external.steam match is solid
-        // (the same kind of data-sparsity gap the WonderSwan/CDi/VB
-        // corrections above exist to work around). Requiring both was an
-        // unnecessary second gate that could silently exclude a
-        // Steam-confirmed title over incomplete platform metadata. Now gated
-        // on steamAppId alone. WINDOWS_PLATFORM_ID is kept only for the
-        // platform-tag rendering lookup (PLATFORM_NAMES[6] = 'STM'), not for
-        // filtering.
+        // IGDB confirms a Steam App ID for it (via external_games, fetched by
+        // the backend) — reflecting a personal Steam Deck-spec streaming box
+        // as the actual play surface, not "any PC game." Gated on
+        // steamAppId alone (not also requiring a Windows platform tag),
+        // since IGDB's platform tagging can be incomplete for a title even
+        // when its Steam match is solid — the same kind of data-sparsity gap
+        // the WonderSwan/CDi/VB corrections above exist to work around).
+        // WINDOWS_PLATFORM_ID is kept only for the platform-tag rendering
+        // lookup (PLATFORM_NAMES[6] = 'STM'), not for filtering.
         const WINDOWS_PLATFORM_ID = 6;
 
         function isConfirmedSteamTitle(game) {
@@ -874,11 +864,8 @@
         // project owner: if the percentile-blend results don't look right
         // against real data, revert to v8.2.0 (or v8.1.0) and go back to
         // tuning the multiplier-based Critical Darling boost instead.
-        // v9.2.0: promoted to live default after A/B testing 50/50, 70/30,
-        // and 80/20 against 60/40 — 80/20 best matched gut expectations for
-        // hype-heavy franchise titles (e.g. Splatoon) landing top 10-20.
-        const HYPE_WEIGHT = 0.8;
-        const QUALITY_WEIGHT = 0.2;
+        const HYPE_WEIGHT = 0.6;
+        const QUALITY_WEIGHT = 0.4;
 
 
         // v7.8.0: PopScore (v7.5.0-v7.7.x) has been removed from scoring. It was
@@ -1099,44 +1086,21 @@
             // filtered pool only.
             const hypePercentiles = computePercentiles(filtered, g => g.hype_score_raw);
 
-            // v9.5.0-TEST: critic (IGDB) and Steam are ranked as two SEPARATE
-            // percentiles, each against only the games that actually have
-            // that data — not mixed into one shared ranking. Averaging two
-            // differently-shaped raw scales (critic scores span the full
-            // 0-100 range; Steam's % positive is usually bunched 70-95%)
-            // before ranking would let Steam's tighter distribution quietly
-            // skew things. Ranking each separately, then averaging the
-            // resulting PERCENTILES per game in Pass 3, avoids that.
             const criticEligible = filtered.filter(g => (g.aggregatedRating || 0) > 0);
             const criticPercentiles = computePercentiles(criticEligible, g => g.aggregatedRating);
 
-            const steamEligible = filtered.filter(g => g.steamReviewScore != null);
-            const steamPercentiles = computePercentiles(steamEligible, g => g.steamReviewScore);
-
-            // --- Pass 3: blend. A game's quality percentile is the average
-            // of whichever of {criticPercentile, steamPercentile} it has —
-            // both if both exist, just one if only one exists. A game with
-            // NEITHER gets its full weight redistributed to the hype axis
-            // rather than being penalized to a 0 quality percentile — most
-            // retro/niche titles have no aggregated_rating in IGDB and
-            // aren't on Steam at all, and treating "no critic coverage" the
-            // same as "critics hated it" would bury the majority of the
-            // catalog for a data-availability reason, not a quality one.
+            // --- Pass 3: blend. Games with no critic data get their full
+            // weight redistributed to the hype axis rather than being
+            // penalized to a 0 criticPercentile — most retro/niche titles
+            // have no aggregated_rating in IGDB at all, and treating "no
+            // critic coverage" the same as "critics hated it" would bury
+            // the majority of the catalog for a data-availability reason,
+            // not a quality one.
             filtered.forEach(game => {
                 const hypePct = hypePercentiles.get(game) || 0;
-                const hasCritic = criticPercentiles.has(game);
-                const hasSteam = steamPercentiles.has(game);
-
-                if (hasCritic || hasSteam) {
-                    let qualityPct;
-                    if (hasCritic && hasSteam) {
-                        qualityPct = (criticPercentiles.get(game) + steamPercentiles.get(game)) / 2;
-                    } else if (hasCritic) {
-                        qualityPct = criticPercentiles.get(game);
-                    } else {
-                        qualityPct = steamPercentiles.get(game);
-                    }
-                    game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (qualityPct * QUALITY_WEIGHT));
+                if (criticPercentiles.has(game)) {
+                    const criticPct = criticPercentiles.get(game);
+                    game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (criticPct * QUALITY_WEIGHT));
                 } else {
                     game.hype_score = Math.round(hypePct);
                 }
@@ -1159,7 +1123,7 @@
                     <div class="game-info">
                         <div class="game-title">${game.name}</div>
                         <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
-                            Score: <span class="engagement-value">${game.hype_score}</span>
+                            Hype Score: <span class="engagement-value">${game.hype_score}</span>
                         </div>
                         <div style="margin-top: 4px;">
                             ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}${isConfirmedSteamTitle(game) ? `<span class="platform-tag">${PLATFORM_NAMES[WINDOWS_PLATFORM_ID]}</span>` : ''}
