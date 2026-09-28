@@ -57,7 +57,7 @@
         // page — the blob page serves HTML with no CORS headers, so fetch()
         // will fail with an "Access-Control-Allow-Origin" error like the one
         // above.
-        const CSV_URL = 'https://raw.githubusercontent.com/noiseredux/test-channel/main/want-to-play.csv';
+        const CSV_URL = 'https://raw.githubusercontent.com/noiseredux/whatshouldnoisereduxplay/main/want-to-play.csv';
 
         const COVER_ART_URL = 'https://script.google.com/macros/s/AKfycbyUhqm3gLlqzSrK-tfxB-uHfTbUBfUwYiHxLmMJqeBPiADBHta1Eg2QUi-1UPtpZkrD/exec';
 
@@ -298,7 +298,7 @@
 
             gamesList.forEach((game, index) => {
                 const card = document.createElement('a');
-                card.className = 'game-card' + (index >= 5 ? ' below-top5' : '');
+                card.className = 'game-card' + (index >= 12 ? ' below-top5' : '');
                 card.href = game.url || '#';
                 card.target = '_blank';
                 const imageId = game.id != null ? coverCache[game.id] : null;
