@@ -29,17 +29,18 @@
         .game-image { width: 100%; height: 100%; object-fit: cover; }
         .game-title { font-weight: 700; font-size: 1.2rem; color: var(--text); }
         .engagement-value { color: var(--nin-red); font-weight: 700; }
+        .breakdown { color: var(--text-muted); font-size: 0.75rem; }
         .platform-tag { background: #edf2f7; color: #4a5568; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #cbd5e0; }
         footer { padding: 50px; text-align: center; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid #e2e2ea; }
-        .vanilla-banner { background: #f3e8ff; color: #4c1d95; text-align: center; padding: 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid #ddd0f7; }
+        .vanilla-banner { background: #fff3cd; color: #664d03; text-align: center; padding: 8px; font-size: 0.8rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; border-bottom: 1px solid #ffe69c; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="vanilla-banner">Boosted Hype Build — Franchise/Publisher Multipliers On, Review Scores Still Excluded</div>
+        <div class="vanilla-banner">Pure Engagement Build — Follows + User Ratings + Reviews, No Weighting, No Boosts</div>
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <div class="version-tag">Boosted Hype Build · v15.0.0</div>
+            <div class="version-tag">Pure Engagement Build · v16.0.0</div>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -49,22 +50,21 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 15.0.0 — full multiplier pipeline, pure-hype base, backend v5.11.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 16.0.0 — pure engagement sum, no multipliers/boosts/scores, backend v5.12.0</span>
         </footer>
     </div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
 
-        // --- v15.0.0: BOOSTED HYPE BUILD ---
-        // This is the full Nintendo/Sony/Namco/Sega/Pillar/franchise-IP/
-        // platform-correction multiplier pipeline from the original engine,
-        // applied on top of a pure engagement base score: (reviews * 3) +
-        // follows + hypes. It stops exactly where the old "Pass 1" hype
-        // score used to stop, before the v8.3.0-era Critical Darling
-        // percentile blend ever mixed in totalRating/rating/aggregatedRating.
-        // Those rating fields are still present on the game object (backend
-        // v5.11.0 sends them) but nothing below reads them.
+        // --- v16.0.0: PURE ENGAGEMENT BUILD ---
+        // Score is a flat, unweighted sum of three raw counts, nothing else:
+        //   follows      = IGDB "want to play" follow count
+        //   ratingCount  = number of USER ratings (IGDB rating_count)
+        //   reviews      = total_rating_count (combined user + critic count)
+        // No multipliers, no franchise/publisher boosts, no rating VALUES
+        // (totalRating/rating/aggregatedRating are still on the game object
+        // but entirely unused here), no *3 or other weighting on any term.
         const WINDOWS_PLATFORM_ID = 6;
 
         function isConfirmedSteamTitle(game) {
@@ -73,140 +73,6 @@
 
         const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35, 3];
         const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG', 3: 'LNX', 6: 'STM' };
-
-        // --- Scoring constants (multipliers only â€” no rating-based logic) ---
-        const GENRE_SPORT_ID = 14;
-        const SPORT_MULTIPLIER = 2.5;
-
-        const NINTENDO_AFFILIATED_MULTIPLIER = 8.25;
-        const SONY_AFFILIATED_MULTIPLIER = 3.75;
-
-        const PILLAR_PUBLISHERS = ['square', 'enix', 'capcom', 'konami'];
-        const PILLAR_MULTIPLIER = 1.5;
-
-        const NINTENDO_IP_SLUGS = [
-            'mario',
-            'zelda',
-            'hyrule',
-            'metroid',
-            'kirby',
-            'donkey-kong',
-            'star-fox',
-            'starlink'
-        ];
-        const NINTENDO_IP_MULTIPLIER = 5.0;
-
-        const CDI_PLATFORM_ID = 117;
-        const CDI_NINTENDO_SLUGS = ['zelda', 'mario', 'link'];
-        const CDI_MULTIPLIER = 60.0;
-
-        const VB_PLATFORM_ID = 87;
-        const VB_MULTIPLIER = 4.0;
-
-        const WS_PLATFORM_IDS = [57, 123];
-        const WS_MULTIPLIER = 20.0;
-
-        const DIGITAL_PICTURES_DEVELOPERS = ['digital pictures'];
-        const DIGITAL_PICTURES_MULTIPLIER = 22.0;
-
-        const MAJOR_LEAGUE_TITLE_SLUGS = [
-            'madden',
-            'mlb-the-show',
-            'nhl-',
-            'nascar',
-            'ea-sports-college-football',
-            'pga-tour-2k'
-        ];
-        const MAJOR_LEAGUE_MULTIPLIER = 6.5;
-
-        const NINTENDO_AFFILIATED_PUBLISHERS = [
-            'nintendo', 'the pokemon company', 'bullet-proof software', 'hal laboratory',
-            'hal america', 'game freak', 'monolith soft', 'retro studios', 'intelligent systems',
-            'creatures inc', 'nd cube', 'grezzo', 'camelot', 'alphadream', 'brownie brown',
-            '1-up studio', 'jupiter corporation', 'ambrella', 'skip ltd', 'rare', 'rareware',
-            'hudson soft', 'hudson entertainment', 'ape inc', 'tose', 'arzest', 'syn sophia',
-            'arika', 'ganbarion', 'genius sonority', 'paon', 'treasure', 'mistwalker',
-            'next level games', 'vanpool', 'good-feel', 'mercurysteam', 'koei tecmo',
-            'omega force', 'team ninja', 'platinumgames', 'acclaim', 'ljn',
-            'iguana entertainment', 'sculptured software', 'arena entertainment',
-            'valiant comics', 'mirrorsoft', 'nicalis', 'flying tiger', 'argonaut',
-            'software toolworks', 'mindscape', 'interplay', 'radical entertainment',
-            'knowledge adventure'
-        ];
-
-        const SONY_AFFILIATED_PUBLISHERS = [
-            'sony', 'csg imagesoft', 'sony imagesoft', 'apple', 'rac7', 'cbs electronics',
-            'cbs software', 'psygnosis', 'studio liverpool', 'guerrilla games', 'naughty dog',
-            'insomniac games', 'sucker punch', 'media molecule', 'evolution studios',
-            'polyphony digital', 'japan studio', 'team asobi', 'bend studio', 'san diego studio',
-            'zipper interactive', 'bigbig studios', 'ready at dawn', 'firesprite', 'housemarque',
-            'bluepoint games', 'nixxes software', 'bungie', 'arrowhead', 'kojima productions',
-            'shift up', 'fromsoftware', 'sumo digital', 'ember lab', 'media.vision',
-            'supermassive games', 'quantic dream', 'clap hanz', 'thatgamecompany', 'novarama',
-            'relentless software', 'game republic', 'eurocom', 'ballistic moon',
-            'superbot entertainment', 'malibu interactive', 'core design', 'ringler studios',
-            'absolute entertainment', 'imagineering', "traveller's tales", 'kogado',
-            'software creations', 'probe software', 'probe entertainment',
-            'acclaim studios london', 'acclaim cheltenham', 'sensible software', 'spidersoft',
-            'motivetime', 'outside directors', 'park place productions', 'sting entertainment',
-            'tiertex', 'teque', 'ocean software', 'ukiyotei', 'propaganda code', 'bits studios',
-            'bits studio', 'teeny weeny games', 'perfect 10 productions', 'perfect entertainment',
-            'factor 5', 'kitty group', 'technos japan', 'mecc', 'broderbund', 'sierra',
-            'infocom', 'epyx', 'sublogic', 'muse software', 'ubisoft', 'cyan worlds',
-            'pangea software', 'callisto corporation', 'velocity development', 'velocity inc',
-            'peninsula gameworks', 'green dragon creations', 'edmark', 'theatrix interactive',
-            'disney interactive', 'dma design', 'rockstar north', 'rockstar games', 'q-games'
-        ];
-
-        const NINTENDO_AFFILIATED_DEVELOPERS = [
-            'nintendo', 'the pokemon company', 'bullet-proof software', 'hal laboratory',
-            'hal america', 'game freak', 'monolith soft', 'retro studios', 'intelligent systems',
-            'creatures inc', 'nd cube', 'grezzo', 'camelot', 'alphadream', 'brownie brown',
-            '1-up studio', 'jupiter corporation', 'ambrella', 'skip ltd', 'rare', 'rareware',
-            'hudson soft', 'hudson entertainment', 'ape inc', 'tose', 'arzest', 'syn sophia',
-            'arika', 'ganbarion', 'genius sonority', 'paon', 'treasure', 'mistwalker',
-            'next level games', 'vanpool', 'good-feel', 'mercurysteam', 'koei tecmo',
-            'omega force', 'team ninja', 'platinumgames', 'acclaim', 'ljn',
-            'iguana entertainment', 'sculptured software', 'arena entertainment',
-            'valiant comics', 'mirrorsoft', 'nicalis', 'flying tiger', 'argonaut',
-            'software toolworks', 'mindscape', 'interplay', 'radical entertainment',
-            'knowledge adventure'
-        ];
-
-        const SONY_AFFILIATED_DEVELOPERS = [
-            'sony', 'apple', 'rac7', 'cbs electronics', 'cbs software', 'psygnosis',
-            'studio liverpool', 'guerrilla games', 'naughty dog', 'insomniac games',
-            'sucker punch', 'media molecule', 'evolution studios', 'polyphony digital',
-            'japan studio', 'team asobi', 'bend studio', 'san diego studio',
-            'zipper interactive', 'bigbig studios', 'ready at dawn', 'firesprite',
-            'housemarque', 'bluepoint games', 'nixxes software', 'bungie', 'arrowhead',
-            'kojima productions', 'shift up', 'fromsoftware', 'sumo digital', 'ember lab',
-            'media.vision', 'supermassive games', 'quantic dream', 'clap hanz',
-            'thatgamecompany', 'novarama', 'relentless software', 'game republic', 'eurocom',
-            'ballistic moon', 'superbot entertainment', 'malibu interactive', 'core design',
-            'ringler studios', 'absolute entertainment', 'imagineering', "traveller's tales",
-            'kogado', 'software creations', 'probe software', 'probe entertainment',
-            'acclaim studios london', 'acclaim cheltenham', 'sensible software', 'spidersoft',
-            'motivetime', 'outside directors', 'park place productions', 'sting entertainment',
-            'tiertex', 'teque', 'ocean software', 'ukiyotei', 'propaganda code', 'bits studios',
-            'bits studio', 'teeny weeny games', 'perfect 10 productions', 'perfect entertainment',
-            'factor 5', 'kitty group', 'technos japan', 'mecc', 'broderbund', 'sierra',
-            'infocom', 'epyx', 'sublogic', 'muse software', 'ubisoft', 'cyan worlds',
-            'pangea software', 'callisto corporation', 'velocity development', 'velocity inc',
-            'peninsula gameworks', 'green dragon creations', 'edmark', 'theatrix interactive',
-            'disney interactive', 'dma design', 'rockstar north', 'q-games'
-        ];
-
-        const NAMCO_PUBLISHERS = ['namco', 'bandai namco'];
-        const NAMCO_DEVELOPERS = ['wolf team'];
-        const NAMCO_MULTIPLIER = 2.5;
-
-        const SEGA_PUBLISHERS = ['sega', 'atlus'];
-        const SEGA_DEVELOPERS = ['sega', 'atlus'];
-        const SEGA_MULTIPLIER = 3.5;
-
-        const MAINSTREAM_TITLE_SLUGS = ['call-of-duty', 'madden'];
-        const MAINSTREAM_MULTIPLIER = 2.0;
 
         // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
         const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
@@ -220,98 +86,6 @@
             }
         }
 
-        function isMainstreamTitle(game) {
-            if (!game.slug) return false;
-            return MAINSTREAM_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
-        }
-
-        function isMajorLeagueTitle(game) {
-            if (!game.slug) return false;
-            return MAJOR_LEAGUE_TITLE_SLUGS.some(keyword => game.slug.includes(keyword));
-        }
-
-        function isNamcoTitle(game) {
-            const publisherMatch = game.publishers && game.publishers.some(pub =>
-                NAMCO_PUBLISHERS.some(n => pub.toLowerCase().includes(n))
-            );
-            const developerMatch = game.developers && game.developers.some(dev =>
-                NAMCO_DEVELOPERS.some(n => dev.toLowerCase().includes(n))
-            );
-            return publisherMatch || developerMatch;
-        }
-
-        function isSegaTitle(game) {
-            const publisherMatch = game.publishers && game.publishers.some(pub =>
-                SEGA_PUBLISHERS.some(s => pub.toLowerCase().includes(s))
-            );
-            const developerMatch = game.developers && game.developers.some(dev =>
-                SEGA_DEVELOPERS.some(s => dev.toLowerCase().includes(s))
-            );
-            return publisherMatch || developerMatch;
-        }
-
-        function isNintendoAffiliated(game) {
-            const publisherMatch = game.publishers && game.publishers.some(pub =>
-                NINTENDO_AFFILIATED_PUBLISHERS.some(aff => pub.toLowerCase().includes(aff))
-            );
-            const developerMatch = game.developers && game.developers.some(dev =>
-                NINTENDO_AFFILIATED_DEVELOPERS.some(aff => dev.toLowerCase().includes(aff))
-            );
-            return publisherMatch || developerMatch;
-        }
-
-        function isSonyAffiliated(game) {
-            const publisherMatch = game.publishers && game.publishers.some(pub =>
-                SONY_AFFILIATED_PUBLISHERS.some(aff => pub.toLowerCase().includes(aff))
-            );
-            const developerMatch = game.developers && game.developers.some(dev =>
-                SONY_AFFILIATED_DEVELOPERS.some(aff => dev.toLowerCase().includes(aff))
-            );
-            return publisherMatch || developerMatch;
-        }
-
-        function isAffiliatedPublisher(game) {
-            return isNintendoAffiliated(game) || isSonyAffiliated(game);
-        }
-
-        function isCDiNintendoTitle(game) {
-            if (!game.platforms || !game.slug) return false;
-            return game.platforms.includes(CDI_PLATFORM_ID) &&
-                CDI_NINTENDO_SLUGS.some(s => game.slug.includes(s));
-        }
-
-        function isVirtualBoyTitle(game) {
-            if (!game.platforms) return false;
-            return game.platforms.includes(VB_PLATFORM_ID);
-        }
-
-        function isWonderSwanTitle(game) {
-            if (!game.platforms) return false;
-            return game.platforms.some(p => WS_PLATFORM_IDS.includes(p));
-        }
-
-        function isNintendoIPTitle(game) {
-            if (!game.slug) return false;
-            return NINTENDO_IP_SLUGS.some(s => game.slug.includes(s));
-        }
-
-        function isPillarTitle(game) {
-            const pubMatch = game.publishers && game.publishers.some(pub =>
-                PILLAR_PUBLISHERS.some(p => pub.toLowerCase().includes(p))
-            );
-            const devMatch = game.developers && game.developers.some(dev =>
-                PILLAR_PUBLISHERS.some(p => dev.toLowerCase().includes(p))
-            );
-            return pubMatch || devMatch;
-        }
-
-        function isDigitalPicturesTitle(game) {
-            if (!game.developers) return false;
-            return game.developers.some(dev =>
-                DIGITAL_PICTURES_DEVELOPERS.some(d => dev.toLowerCase().includes(d))
-            );
-        }
-
         function displayGames(gamesList) {
             const content = document.getElementById('content');
 
@@ -321,52 +95,9 @@
                 return isCorrectPlatform && !isBlacklistedCategory;
             });
 
-            // Pure engagement base, then every boost/multiplier applied on
-            // top â€” exactly the old "Pass 1" pipeline. No rating data used.
+            // Flat, unweighted sum. That's it.
             filtered.forEach(game => {
-                let score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0);
-
-                if (game.genres && game.genres.includes(GENRE_SPORT_ID)) {
-                    score = Math.round(score * SPORT_MULTIPLIER);
-                }
-                if (isMajorLeagueTitle(game)) {
-                    score = Math.round(score * MAJOR_LEAGUE_MULTIPLIER);
-                }
-                if (isMainstreamTitle(game)) {
-                    score = Math.round(score * MAINSTREAM_MULTIPLIER);
-                }
-                if (isNintendoAffiliated(game)) {
-                    score = Math.round(score * NINTENDO_AFFILIATED_MULTIPLIER);
-                } else if (isSonyAffiliated(game)) {
-                    score = Math.round(score * SONY_AFFILIATED_MULTIPLIER);
-                }
-                if (isNamcoTitle(game)) {
-                    score = Math.round(score * NAMCO_MULTIPLIER);
-                }
-                if (isSegaTitle(game)) {
-                    score = Math.round(score * SEGA_MULTIPLIER);
-                }
-                if (isPillarTitle(game)) {
-                    score = Math.round(score * PILLAR_MULTIPLIER);
-                }
-                const isUbisoftTitle = game.publishers && game.publishers.some(p => p.toLowerCase().includes('ubisoft'));
-                if (isNintendoIPTitle(game) && (!isAffiliatedPublisher(game) || isUbisoftTitle) && !isCDiNintendoTitle(game)) {
-                    score = Math.round(score * NINTENDO_IP_MULTIPLIER);
-                }
-                if (isCDiNintendoTitle(game)) {
-                    score = Math.round(score * CDI_MULTIPLIER);
-                }
-                if (isVirtualBoyTitle(game)) {
-                    score = Math.round(score * VB_MULTIPLIER);
-                }
-                if (isWonderSwanTitle(game)) {
-                    score = Math.round(score * WS_MULTIPLIER);
-                }
-                if (isDigitalPicturesTitle(game)) {
-                    score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER);
-                }
-
-                game.hype_score = score;
+                game.hype_score = (game.follows || 0) + (game.ratingCount || 0) + (game.reviews || 0);
             });
 
             filtered = filtered.filter(game => game.hype_score > 0);
@@ -395,6 +126,7 @@
                         <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
                             Score: <span class="engagement-value">${game.hype_score}</span>
                         </div>
+                        <div class="breakdown">${game.follows || 0} follows &nbsp;·&nbsp; ${game.ratingCount || 0} user ratings &nbsp;·&nbsp; ${game.reviews || 0} reviews</div>
                         <div style="margin-top: 4px;">
                             ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}${isConfirmedSteamTitle(game) ? `<span class="platform-tag">${PLATFORM_NAMES[WINDOWS_PLATFORM_ID]}</span>` : ''}
                         </div>
