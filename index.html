@@ -37,10 +37,10 @@
 </head>
 <body>
     <div class="container">
-        <div class="vanilla-banner">Pure Score Build — Ranked by IGDB Total Rating Only, No Hype/Engagement</div>
+        <div class="vanilla-banner">Confidence-Weighted Score Build — Weighted Against Year's Max Review Count</div>
         <header>
             <h1>What Should Noiseredux Play?</h1>
-            <div class="version-tag">Pure Score Build · v17.0.0</div>
+            <div class="version-tag">Confidence-Weighted Build · v18.0.0</div>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -50,21 +50,33 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 17.0.0 — ranked by total_rating only, no hype/weighting/boosts, backend v5.12.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 18.0.0 — total_rating confidence-weighted vs. that year's max review count, backend v5.12.0</span>
         </footer>
     </div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
 
-        // --- v17.0.0: PURE SCORE BUILD ---
-        // Ranking is nothing but game.totalRating (IGDB's own blended
-        // user+critic score) sorted descending. No engagement fields
-        // (follows/ratingCount/reviews/hypes) factor into the ranking at
-        // all â€” they're still on the game object and shown for context in
-        // each card, but they don't move a game's position. No Bayesian
-        // weighting against review count (that's the separate v13.x
-        // build), no multipliers, no boosts.
+        // --- v18.0.0: CONFIDENCE-WEIGHTED SCORE BUILD ---
+        // Builds on v17's "pure totalRating" ranking, but fixes the "1
+        // review sitting at #1" problem by weighting each game's rating
+        // against how many reviews it has RELATIVE TO the most-reviewed
+        // game that year, rather than ranking raw scores unweighted:
+        //
+        //   confidence = reviews / maxReviewsThisYear   (1.0 = the year's
+        //                                                 most-reviewed game)
+        //   weighted   = confidence * totalRating
+        //              + (1 - confidence) * C
+        //
+        //   C = mean totalRating across this year's rated games (the
+        //       fallback a low-confidence game gets pulled toward)
+        //
+        // The year's most-reviewed game keeps its score exactly as-is
+        // (confidence = 1, no pull toward the mean at all). A game with
+        // very few reviews compared to that year's ceiling gets pulled
+        // hard toward the year's average instead of trusting its own
+        // (statistically shaky) rating. No engagement fields (follows/
+        // ratingCount/hypes) are used anywhere in this build.
         const WINDOWS_PLATFORM_ID = 6;
 
         function isConfirmedSteamTitle(game) {
@@ -86,6 +98,15 @@
             }
         }
 
+        // Computes this year's ceiling (max reviews) and prior mean rating
+        // (C), across all eligible (rated) games.
+        function computeYearStats(games) {
+            if (!games.length) return { C: 0, maxReviews: 0 };
+            const C = games.reduce((sum, g) => sum + g.totalRating, 0) / games.length;
+            const maxReviews = games.reduce((max, g) => Math.max(max, g.reviews || 0), 0);
+            return { C, maxReviews };
+        }
+
         function displayGames(gamesList) {
             const content = document.getElementById('content');
 
@@ -95,8 +116,7 @@
                 return isCorrectPlatform && !isBlacklistedCategory;
             });
 
-            // Only games with an actual IGDB total_rating can be ranked at
-            // all â€” there's no engagement fallback in this build.
+            // Only games with an actual IGDB total_rating can be ranked.
             filtered = filtered.filter(game => (game.totalRating || 0) > 0);
 
             if (!filtered.length) {
@@ -104,8 +124,13 @@
                 return;
             }
 
+            const { C, maxReviews } = computeYearStats(filtered);
+
             filtered.forEach(game => {
-                game.hype_score = Math.round(game.totalRating);
+                const v = game.reviews || 0;
+                const confidence = maxReviews > 0 ? Math.min(v / maxReviews, 1) : 0;
+                game.confidence = confidence;
+                game.hype_score = Math.round((confidence * game.totalRating) + ((1 - confidence) * C));
             });
 
             filtered.sort((a, b) => b.hype_score - a.hype_score);
@@ -119,6 +144,7 @@
                 card.href = `https://www.igdb.com/games/${game.slug}`;
                 card.target = '_blank';
                 const coverUrl = game.cover ? `https://images.igdb.com/igdb/image/upload/t_cover_small/${game.cover}.jpg` : '';
+                const confidencePct = Math.round(game.confidence * 100);
                 card.innerHTML = `
                     <div class="game-rank">#${index + 1}</div>
                     <div class="game-image-container">${game.cover ? `<img class="game-image" src="${coverUrl}" alt="${game.name} cover">` : ''}</div>
@@ -127,7 +153,7 @@
                         <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
                             Score: <span class="engagement-value">${game.hype_score}</span>
                         </div>
-                        <div class="breakdown">${game.reviews || 0} reviews</div>
+                        <div class="breakdown">${game.reviews || 0} reviews &nbsp;·&nbsp; ${confidencePct}% confidence &nbsp;·&nbsp; raw rating ${Math.round(game.totalRating)}</div>
                         <div style="margin-top: 4px;">
                             ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}${isConfirmedSteamTitle(game) ? `<span class="platform-tag">${PLATFORM_NAMES[WINDOWS_PLATFORM_ID]}</span>` : ''}
                         </div>
