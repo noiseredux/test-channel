@@ -50,7 +50,7 @@
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
+        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
 
         // --- v19.0.0: CRITIC-WEIGHTED SCORE BUILD ---
         // Same confidence-weighting mechanism as v18 (a game's score is
@@ -103,7 +103,12 @@
 
         // Blends user + critic scores with critic weighted more heavily.
         // If only one side exists, that one is used at full weight rather
-        // than penalizing the game for missing data on the other axis.
+        // than penalizing the game for missing data on the other axis. If
+        // NEITHER rating nor aggregatedRating is populated, falls back to
+        // IGDB's own totalRating â€” some games only have that pre-blended
+        // value populated and nothing in the two separate fields, and we
+        // don't want to drop them from the list entirely just because we
+        // can't split their score into weighted components.
         function blendedRating(game) {
             const userR = game.rating || 0;
             const criticR = game.aggregatedRating || 0;
@@ -112,7 +117,7 @@
             }
             if (criticR > 0) return criticR;
             if (userR > 0) return userR;
-            return 0;
+            return game.totalRating || 0;
         }
 
         // Computes this year's ceiling (max reviews) and prior mean rating
