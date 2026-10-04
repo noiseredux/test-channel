@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.6.1</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.7.0</span>
         </footer>
     </div>
 
@@ -213,6 +213,10 @@
         const DIGITAL_PICTURES_DEVELOPERS = ['digital pictures'];
         const DIGITAL_PICTURES_MULTIPLIER = 22.0;
 
+        // v9.7.0: Merit Badge boost for elite critical darlings (e.g., Metacritic 90+)
+        const MERIT_BADGE_THRESHOLD = 90;
+        const MERIT_BADGE_MULTIPLIER = 1.4;
+
         // v5.3.0: Major league sports titles receive an additional boost on top of
         // the standard SPORT_MULTIPLIER. These franchises have massive console-first
         // audiences that don't engage with IGDB, causing severe underrepresentation.
@@ -330,7 +334,7 @@
             // office writing most of the code for Star Fox (1993), a Nintendo-
             // published, Nintendo EAD/Argonaut co-developed title, followed by
             // the unreleased-until-2017 Star Fox 2. Same tier of relationship as
-            // Rare, arguably deeper given the custom hardware collaboration.
+            // Rare, arguably given the custom hardware collaboration.
             'argonaut',
 
             // v7.9.0: The Software Toolworks / Mindscape edutainment-Mario cluster.
@@ -1174,7 +1178,7 @@
             // --- Pass 1: hypeScore, exactly the v8.1.0/v8.2.0 pipeline, MINUS
             // Critical Darling. Every other multiplier (sports/major league/
             // mainstream/affiliated/Namco/Sega/Pillar/Nintendo IP/CDI/VB/WS/
-            // Digital Pictures) still applies unchanged.
+            // Digital Pictures/Merit Badge) still applies unchanged.
             filtered.forEach(game => {
                 let score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0);
 
@@ -1220,28 +1224,11 @@
                 if (isDigitalPicturesTitle(game)) {
                     score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER);
                 }
+                if ((game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
+                    score = Math.round(score * MERIT_BADGE_MULTIPLIER);
+                }
 
                 game.hype_score_raw = score;
-
-                // TEMPORARY DEBUG — remove once the Myst investigation is resolved.
-                const DEBUG_SLUGS = ['myst', 'the-7th-guest', 'link-the-faces-of-evil'];
-                if (DEBUG_SLUGS.includes(game.slug)) {
-                    console.log('[CDI DEBUG]', {
-                        name: game.name,
-                        publishers: game.publishers,
-                        developers: game.developers,
-                        platforms: game.platforms,
-                        isSonyAffiliated: isSonyAffiliated(game),
-                        isNintendoAffiliated: isNintendoAffiliated(game),
-                        isCDiTitle: isCDiTitle(game),
-                        baseScore: ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0),
-                        reviews: game.reviews,
-                        follows: game.follows,
-                        hypes: game.hypes,
-                        aggregatedRating: game.aggregatedRating,
-                        final_hype_score_raw: score
-                    });
-                }
             });
 
             // Drop zero/negative-hype games before percentile-ranking, same
@@ -1261,21 +1248,18 @@
             const criticEligible = filtered.filter(g => (g.aggregatedRating || 0) > 0);
             const criticPercentiles = computePercentiles(criticEligible, g => g.aggregatedRating);
 
-            // --- Pass 3: blend. Games with no critic data get their full
-            // weight redistributed to the hype axis rather than being
-            // penalized to a 0 criticPercentile — most retro/niche titles
-            // have no aggregated_rating in IGDB at all, and treating "no
-            // critic coverage" the same as "critics hated it" would bury
-            // the majority of the catalog for a data-availability reason,
-            // not a quality one.
+            // --- Pass 3: blend. Unreviewed games default to the median critic
+            // percentile (50th percentile), treating them as neutral rather than
+            // overly penalized or rewarded.
+            const NEUTRAL_CRITIC_PERCENTILE = 50;
+
             filtered.forEach(game => {
                 const hypePct = hypePercentiles.get(game) || 0;
-                if (criticPercentiles.has(game)) {
-                    const criticPct = criticPercentiles.get(game);
-                    game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (criticPct * QUALITY_WEIGHT));
-                } else {
-                    game.hype_score = Math.round(hypePct);
-                }
+                const criticPct = criticPercentiles.has(game) 
+                    ? criticPercentiles.get(game) 
+                    : NEUTRAL_CRITIC_PERCENTILE;
+                    
+                game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (criticPct * QUALITY_WEIGHT));
             });
 
             filtered.sort((a, b) => b.hype_score - a.hype_score);
