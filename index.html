@@ -37,6 +37,7 @@
     <div class="container">
         <header>
             <h1>What Should Noiseredux Play?</h1>
+            <p class="version-tag">Version 8.0 (platform + affiliate updates)</p>
         </header>
         <div class="controls">
             <label>Select Year:</label>
@@ -45,46 +46,29 @@
         <div id="content"></div>
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
-            A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.6.0</span>
+            A personal hype index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy.
         </footer>
     </div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby3_IE8KU_qeQ4JCgTnoaF1w--vPUemtxHjW5Aq3aF_cUN8eqmYny7xlAlbT-wMp4Qj/exec';
 
-        // v9.3.0: Linux (platform 3, IGDB's 'LNX') added to the allowlist.
-        // Rationale: the PS2 Linux Kit shipped in all regions, making PS2
-        // hardware a full Red Hat Linux machine out of the box; the PS3
-        // similarly shipped with OtherOS support, with Sony chiefly
-        // advertising the Yellow Dog Linux variant. Both make Linux — Red Hat,
-        // Yellow Dog, and derivatives like Fedora specifically — part of the
-        // Sony console lineage under this project's mission, not a generic
-        // PC-platform inclusion.
+        // Ported from the live v9.x line (v9.3.0/v9.4.0/v9.4.1): Linux
+        // (platform 3, IGDB's 'LNX') added to the allowlist — the PS2 Linux
+        // Kit shipped in all regions and the PS3 shipped with OtherOS
+        // support (Sony chiefly advertised the Yellow Dog Linux variant),
+        // making Linux part of the Sony console lineage under this project's
+        // mission, not a generic PC-platform inclusion.
         //
-        // v9.4.0: PC (Microsoft Windows, platform 6) is intentionally NOT in
+        // PC (Microsoft Windows, platform 6) is intentionally NOT in
         // ALLOWED_PLATFORMS — admitting it outright would flood the index
-        // with the entire PC catalog, unrelated to this project's
-        // Sony/Nintendo/Apple lens. Instead, a PC title is admitted only when
-        // IGDB confirms a Steam App ID for it (via external.steam, fetched
-        // by the backend as of v5.5.0) — reflecting a personal Steam Deck-
+        // with the entire PC catalog. A PC title is admitted only when IGDB
+        // confirms a Steam App ID for it, reflecting a personal Steam Deck-
         // spec streaming box as the actual play surface, not "any PC game."
-        // See isConfirmedSteamTitle() below for the gating logic, and the
-        // platform-tag rendering in displayGames() for where it's shown as
-        // STM rather than a generic PC label.
-        //
-        // v9.4.1: dropped the platforms.includes(WINDOWS_PLATFORM_ID) half of
-        // this check. The actual signal of interest was always "does IGDB
-        // confirm a Steam App ID," not "is this tagged Windows" — the two
-        // aren't guaranteed to co-occur, since IGDB's platform tagging can be
-        // incomplete for a title even when its external.steam match is solid
-        // (the same kind of data-sparsity gap the WonderSwan/CDi/VB
-        // corrections above exist to work around). Requiring both was an
-        // unnecessary second gate that could silently exclude a
-        // Steam-confirmed title over incomplete platform metadata. Now gated
-        // on steamAppId alone. WINDOWS_PLATFORM_ID is kept only for the
-        // platform-tag rendering lookup (PLATFORM_NAMES[6] = 'STM'), not for
-        // filtering.
+        // Gated on steamAppId alone, not also requiring a Windows platform
+        // tag, since IGDB's platform tagging can be incomplete even when the
+        // Steam match is solid. WINDOWS_PLATFORM_ID is kept only for the
+        // platform-tag rendering lookup (PLATFORM_NAMES[6] = 'STM').
         const WINDOWS_PLATFORM_ID = 6;
 
         function isConfirmedSteamTitle(game) {
@@ -158,11 +142,30 @@
         // IGDB engagement, either due to platform sparsity, regional bias, or the
         // fact that controversy and notoriety generate hype even without positive reception.
 
-        // CDi Nintendo titles: Zelda and Mario games on CDi were massive gaming news
-        // in 1993-1994 despite poor quality. CD-ROM Zelda was mind-blowing concept.
-        // Raw IGDB data is near-zero; 15x needed to reach rational placement.
+        // CDi: originally scoped to only Zelda/Mario-slugged titles on CD-i
+        // (the infamous licensed Zelda games — massive gaming news in
+        // 1993-1994 despite poor quality, CD-ROM Zelda being a mind-blowing
+        // concept at the time). The 60x figure was reverse-engineered
+        // specifically against those Zelda titles to reach rational
+        // placement.
+        // Ported from the live v9.x line (v9.6.0): widened from a
+        // slug-matched subset to the entire CD-i platform, matching how
+        // VB_MULTIPLIER and WS_MULTIPLIER already work below — CD-i as a
+        // whole is exactly the kind of "unloved console" those two
+        // corrections exist for, and scoping the correction to only
+        // Nintendo-licensed titles was an inconsistency with that
+        // established platform-wide pattern.
+        // Caveat worth flagging: unlike VB_MULTIPLIER/WS_MULTIPLIER, which
+        // were derived holistically against their whole platforms, 60x was
+        // calibrated narrowly against the Zelda titles' specific extreme
+        // case — near-zero IGDB data colliding with enormous real-world
+        // notoriety. A random non-Nintendo CD-i title with modest-but-nonzero
+        // engagement could land disproportionately high under the same
+        // multiplier, since it never had the Zelda-level notoriety the
+        // figure was tuned for. Worth a look at CD-i's other titles once
+        // live, the same way other multipliers in this project get checked
+        // against real anchor cases after a scope change.
         const CDI_PLATFORM_ID = 117;
-        const CDI_NINTENDO_SLUGS = ['zelda', 'mario', 'link'];
         const CDI_MULTIPLIER = 60.0;
 
         // Virtual Boy: Huge marketing spend, Nintendo Power coverage, Blockbuster
@@ -532,42 +535,37 @@
             // programmer, opposite console family.
             'q-games',
 
-            // v9.6.0: Linux landscape-builders, placed here on the same logic as
-            // the Apple II era's Broderbund/Sierra/Infocom/Epyx/Sublogic/Muse
-            // Software above — none of these studios had any corporate
-            // relationship with a platform holder, but their catalogs ARE the
-            // canon that made the platform a real place to play games. Linux
-            // itself entered this project's scope in v9.3.0 as an extension of
-            // Sony's own lineage (PS2 Linux Kit, PS3 OtherOS), the same way MSX
-            // and Sharp X1/X68000 sit under Nintendo as early-computer eras — so
-            // Linux's own landscape-builders slot into the SONY bucket here,
-            // not a new standalone tier, for consistency with that placement.
+            // Ported from the live v9.x line (v9.6.0): Linux landscape-builders,
+            // placed here on the same logic as the Apple II era's
+            // Broderbund/Sierra/Infocom/Epyx/Sublogic/Muse Software above —
+            // none of these studios had any corporate relationship with a
+            // platform holder, but their catalogs ARE the canon that made the
+            // platform a real place to play games. Linux itself entered this
+            // project's scope as an extension of Sony's own lineage (PS2
+            // Linux Kit, PS3 OtherOS), the same way MSX and Sharp X1/X68000
+            // sit under Nintendo as early-computer eras — so Linux's own
+            // landscape-builders slot into the SONY bucket here, not a new
+            // standalone tier, for consistency with that placement.
             // Loki Software (1998-2001, founded by Ryan C. Gordon) was the
-            // first real attempt at commercial Linux gaming, porting Civilization:
-            // Call to Power, Quake III Arena, and SimCity 3000 — genuinely
-            // pioneering work IGDB's raw engagement numbers for that era don't
-            // reflect. Linux Game Publishing carried that same mission forward
-            // through the 2000s (Sacred: Gold, Jets'n'Guns). Feral Interactive
+            // first real attempt at commercial Linux gaming, porting
+            // Civilization: Call to Power, Quake III Arena, and SimCity 3000.
+            // Linux Game Publishing carried that same mission forward through
+            // the 2000s (Sacred: Gold, Jets'n'Guns). Feral Interactive
             // extended the lineage into the 2010s AAA-porting era (Total War,
-            // Tomb Raider, Deus Ex: Mankind Divided, Mad Max, XCOM), proving
-            // complex, high-end titles could run well on Linux.
-            // Explicitly considered and rejected for this entry, after checking
-            // real ranking data (2015: Rocket League #5, Undertale #4, Cities:
-            // Skylines #47 — all already landing exactly where a hit of that
-            // caliber should, no IGDB underrepresentation to correct):
-            // Valve is its own standalone platform-holder tier (see
-            // VALVE_PUBLISHERS/DEVELOPERS below) — it's a peer to Sony, the same
-            // reasoning that already keeps Sega and Namco out of this list.
-            // CodeWeavers builds Proton/Wine but doesn't develop games itself —
-            // there's no catalog for a "developer/publisher" boost to attach to.
-            // Studios that simply ship good native Linux builds in an already-
-            // mature ecosystem (Frictional Games, Wube Software/Factorio, Klei,
-            // Paradox) were left out because their games are already scoring
-            // accurately without correction, and because — unlike every other
-            // multiplier in this project, which traces back to either genuine
-            // historical lineage or an IGDB data-sparsity correction — boosting
-            // them would introduce a third justification (rewarding ongoing
-            // platform-support practice) this project hasn't used anywhere else.
+            // Tomb Raider, Deus Ex: Mankind Divided, Mad Max, XCOM).
+            // Explicitly considered and rejected for this entry: Valve is its
+            // own standalone platform-holder tier (see VALVE_PUBLISHERS
+            // above) — a peer to Sony, same reasoning that keeps Sega and
+            // Namco out of this list. CodeWeavers builds Proton/Wine but
+            // doesn't develop games itself. Studios that simply ship good
+            // native Linux builds in an already-mature ecosystem (Frictional
+            // Games, Wube Software/Factorio, Klei, Paradox) were left out
+            // because their games already score accurately without
+            // correction, and because — unlike every other multiplier in
+            // this project, which traces back to genuine historical lineage
+            // or an IGDB data-sparsity correction — boosting them would
+            // introduce a third justification (rewarding ongoing platform-
+            // support practice) this project hasn't used anywhere else.
             'loki',
             'linux game publishing',
             'feral interactive'
@@ -770,7 +768,8 @@
             // v7.4.3: Q-Games — see rationale in SONY_AFFILIATED_PUBLISHERS above.
             'q-games',
 
-            // v9.6.0: Linux landscape-builders — see full rationale in
+            // Ported from the live v9.x line (v9.6.0): Linux
+            // landscape-builders — see full rationale in
             // SONY_AFFILIATED_PUBLISHERS above.
             'loki',
             'linux game publishing',
@@ -844,61 +843,53 @@
         const SEGA_DEVELOPERS = ['sega', 'atlus'];
         const SEGA_MULTIPLIER = 3.5;
 
-        // v9.5.0: Valve gets its own standalone tier, same shape as Sega/Namco.
-        // Rationale: Linux was added to the allowlist in v9.3.0 for its PS2 Linux
-        // Kit / PS3 OtherOS lineage, but Linux itself has no "defining" developers
-        // or publishers — it has always been FOSS. SteamOS changed that in practice.
-        // SteamOS began as a Debian-based distro and is now Arch-based, and the
-        // Steam Deck in particular is why Linux gaming is in a better place today
-        // than it has ever been — a viable, mainstream alternative to Windows PC
-        // gaming rather than a curiosity. That makes Valve the closest thing Linux
-        // has to a first-party platform steward, and the studios that have
-        // developed Valve-published games are part of that same story. Full-catalog
-        // treatment per project philosophy: the relationship colors everything
-        // these studios have made, not just their Valve-published titles.
-        // Kept out of the Sony/Nintendo affiliated lists since Valve is its own
-        // platform holder (peer, not contractor), same reasoning as Sega/Namco.
+        // Ported from the live v9.x line (v9.5.0/v9.5.1/v9.5.2): Valve gets
+        // its own standalone tier, same shape as Sega/Namco.
+        // Rationale: Linux was added to the allowlist for its PS2 Linux Kit /
+        // PS3 OtherOS lineage, but Linux itself has no "defining" developers
+        // or publishers — it has always been FOSS. SteamOS changed that in
+        // practice. SteamOS began as a Debian-based distro and is now
+        // Arch-based, and the Steam Deck in particular is why Linux gaming is
+        // in a better place today than it has ever been — a viable,
+        // mainstream alternative to Windows PC gaming rather than a
+        // curiosity. That makes Valve the closest thing Linux has to a
+        // first-party platform steward, and the studios that have developed
+        // Valve-published games are part of that same story. Full-catalog
+        // treatment per project philosophy: the relationship colors
+        // everything these studios have made, not just their
+        // Valve-published titles.
+        // Kept out of the Sony/Nintendo affiliated lists since Valve is its
+        // own platform holder (peer, not contractor), same reasoning as
+        // Sega/Namco.
         //
-        // Partner/affiliate list, per the rule "anyone who has worked on developing
-        // Valve-published games":
-        //   - Valve (first party: Half-Life, Portal, Left 4 Dead 2, Team Fortress,
-        //     Counter-Strike, Dota, Half-Life: Alyx, etc.)
-        //   - Turtle Rock Studios (developed the original Left 4 Dead; Valve
-        //     acquired the studio in 2008 before it later spun back out)
-        //   - Hidden Path Entertainment (co-developed Counter-Strike: Global Offensive)
-        //   - Gearbox Software (Half-Life: Opposing Force, Blue Shift, Decay;
-        //     Counter-Strike: Condition Zero). NOTE: full-catalog treatment means
-        //     Borderlands and other Gearbox titles get boosted too — if that
-        //     turns out to overreach, this is the first entry to remove.
-        //   - Ritual Entertainment (Counter-Strike: Condition Zero)
-        //
-        // v9.5.1: partner list extended from Wikipedia's "List of Valve games":
-        //   - Facepunch Studios (developed Garry's Mod, whose standalone release
-        //     Valve published in 2006). NOTE: full-catalog treatment means Rust
-        //     and other Facepunch titles get boosted too.
-        //   - Rogue Entertainment (Counter-Strike: Condition Zero collaboration)
-        //   - NuclearVision (Codename Gordon, published by Valve)
-        //   - WeCreateStuff (Portal: Still Alive on Xbox 360)
-        //   - Cloudhead Games (Aperture Hand Lab, published by Valve)
-        //   - Campo Santo (acquired by Valve in 2018; same acquisition logic as
-        //     Turtle Rock). NOTE: full-catalog treatment boosts Firewatch.
-        //
-        // v9.5.2: Nexon added. Nexon developed Counter-Strike Nexon, a
-        // Valve-published game, which puts it on the same footing as every other
-        // studio on this list under the "worked on developing Valve-published
-        // games" rule. NOTE: full-catalog treatment means the rest of Nexon's
-        // catalog (MapleStory, The First Descendant, Dave the Diver, etc.) gets
-        // boosted too.
-        // Deliberately NOT included: Electronic Arts (only ported The Orange Box
-        // to PS3) and Nvidia (only co-made the Portal: Companion Collection port
-        // for Switch). Porting existing Valve collections to other hardware is
-        // not developing a Valve game. Digital Extremes was considered and
-        // rejected — no verifiable Valve connection.
-        // Multiplier is an untested starting guess set equal to the Sony-affiliated
-        // rate (3.75), on the logic that Valve is to Linux gaming roughly what
-        // Sony is to its own lineage. Not yet calibrated against anchor cases
-        // (Half-Life 2, Portal 2, Half-Life: Alyx, Counter-Strike 2) — retune
-        // once seen against real data.
+        // Partner/affiliate list, per the rule "anyone who has worked on
+        // developing Valve-published games": Valve (first party: Half-Life,
+        // Portal, Left 4 Dead 2, Team Fortress, Counter-Strike, Dota,
+        // Half-Life: Alyx), Turtle Rock Studios (original Left 4 Dead; Valve
+        // acquired the studio in 2008 before it later spun back out), Hidden
+        // Path Entertainment (co-developed CS:GO), Gearbox Software
+        // (Half-Life: Opposing Force, Blue Shift, Decay; CS: Condition
+        // Zero — NOTE: full-catalog treatment means Borderlands gets boosted
+        // too), Ritual Entertainment (CS: Condition Zero), Facepunch Studios
+        // (Garry's Mod, whose standalone release Valve published in 2006 —
+        // NOTE: full-catalog treatment means Rust gets boosted too), Rogue
+        // Entertainment (CS: Condition Zero collaboration), NuclearVision
+        // (Codename Gordon), WeCreateStuff (Portal: Still Alive on Xbox 360),
+        // Cloudhead Games (Aperture Hand Lab), Campo Santo (acquired by Valve
+        // in 2018 — NOTE: full-catalog treatment boosts Firewatch), and Nexon
+        // (developed Counter-Strike Nexon, a Valve-published game — NOTE:
+        // full-catalog treatment means the rest of Nexon's catalog gets
+        // boosted too).
+        // Deliberately NOT included: Electronic Arts (only ported The Orange
+        // Box to PS3) and Nvidia (only co-made a Switch port). Porting
+        // existing Valve collections to other hardware is not developing a
+        // Valve game. Digital Extremes was considered and rejected — no
+        // verifiable Valve connection.
+        // Multiplier is an untested starting guess set equal to the
+        // Sony-affiliated rate (3.75), on the logic that Valve is to Linux
+        // gaming roughly what Sony is to its own lineage. Not yet calibrated
+        // against anchor cases (Half-Life 2, Portal 2, Half-Life: Alyx,
+        // Counter-Strike 2) — retune once seen against real data.
         const VALVE_PUBLISHERS = ['valve', 'turtle rock', 'hidden path', 'gearbox', 'ritual entertainment', 'facepunch', 'rogue entertainment', 'nuclearvision', 'wecreatestuff', 'cloudhead games', 'campo santo', 'nexon'];
         const VALVE_DEVELOPERS = ['valve', 'turtle rock', 'hidden path', 'gearbox', 'ritual entertainment', 'facepunch', 'rogue entertainment', 'nuclearvision', 'wecreatestuff', 'cloudhead games', 'campo santo', 'nexon'];
         const VALVE_MULTIPLIER = 3.75;
@@ -915,76 +906,17 @@
         ];
         const MAINSTREAM_MULTIPLIER = 2.0;
 
-        // v8.3.0 EXPERIMENT: Critical Darling rearchitected AGAIN — from a
-        // multiplier (flat in v8.1.0, then quadratic-and-stacking in v8.2.0)
-        // to a percentile-blend composite score. This replaces the multiplier
-        // approach entirely rather than tuning its constants further.
-        //
-        // Why the multiplier approach was abandoned: v8.2.0 could push
-        // Hades II (2025) and Slay the Spire (2019) up meaningfully but never
-        // close to their real Metacritic-relative standing (Hades II is
-        // Metacritic's #2 game of 2025; it landed at #21 under v8.2.0) without
-        // an enormous ceiling constant — and that same enormous constant,
-        // applied to Balatro (2024), overshot its target by 3x (rocketing it
-        // to roughly #2 instead of the #9 the Metacritic comparison implied).
-        // The reverse-engineered "required ceiling" to hit each anchor's
-        // target rank was 20.0 for Hades II, 4.6 for Balatro, and 16.8 for
-        // Slay the Spire — not correlated with critic score (Balatro's own
-        // critic score, 91, is HIGHER than Slay the Spire's ~85, yet needed a
-        // much SMALLER boost). That's the tell: the needed boost depends on
-        // how hype-starved a game's base is relative to its OWN year's field,
-        // which a pure function of critic score has no visibility into. No
-        // single constant (or curve shape) can satisfy arbitrary target ranks
-        // across different years/games under a multiplicative model.
-        //
-        // New approach: stop multiplying critic score onto the hype base.
-        // Instead, treat hype and critic quality as two independent axes,
-        // percentile-rank every filtered game in a given year against its OWN
-        // year's pool on each axis, then blend the two percentiles into a
-        // single composite score. This makes critic score genuinely
-        // rank-competitive regardless of a game's raw buzz, because it's
-        // compared against its actual year's competition rather than run
-        // through a fixed formula:
-        //
-        //   hypePercentile   = this game's percentile rank, by hypeScore
-        //                       (base engagement * every multiplier EXCEPT
-        //                       Critical Darling — sports/affiliated/Namco/
-        //                       Sega/Pillar/IP/CDI/VB/WS/Digital Pictures all
-        //                       still apply exactly as before), among all
-        //                       filtered games that year.
-        //   criticPercentile = this game's percentile rank, by
-        //                       aggregatedRating, among filtered games THAT
-        //                       YEAR WITH a nonzero aggregatedRating. Games
-        //                       with no critic data are NOT penalized to the
-        //                       bottom of this axis — see
-        //                       computeFinalScore() below for how they're
-        //                       handled instead.
-        //   finalScore = hypePercentile * HYPE_WEIGHT
-        //              + criticPercentile * QUALITY_WEIGHT
-        //
-        // HYPE_WEIGHT/QUALITY_WEIGHT sum to 1. Starting split of 0.6/0.4
-        // deliberately keeps this a "hype index" first — raw buzz still
-        // carries more weight than critic consensus — while giving critic
-        // score enough leverage to meaningfully move genuinely acclaimed,
-        // lower-hype titles up several tiers rather than being structurally
-        // capped by their own base the way the multiplier model was. This is
-        // a starting point, not a calibrated final value — same status as
-        // CRITICAL_DARLING_FLOOR/CEILING_MULT were in v8.1.0/v8.2.0. Needs
-        // real per-year data (this environment has no live IGDB access) to
-        // check whether 0.6/0.4 actually lands Hades II near its Metacritic
-        // rank without overshooting the way v8.2.0's ceiling did, and to
-        // retune from there.
-        //
-        // This is explicitly an experiment per the plan agreed with the
-        // project owner: if the percentile-blend results don't look right
-        // against real data, revert to v8.2.0 (or v8.1.0) and go back to
-        // tuning the multiplier-based Critical Darling boost instead.
-        // v9.2.0: promoted to live default after A/B testing 50/50, 70/30,
-        // and 80/20 against 60/40 — 80/20 best matched gut expectations for
-        // hype-heavy franchise titles (e.g. Splatoon) landing top 10-20.
-        const HYPE_WEIGHT = 0.8;
-        const QUALITY_WEIGHT = 0.2;
-
+        // v7.3.0: Critical Darling boost. Any game with 100+ combined user/critic
+        // reviews (IGDB total_rating_count) has demonstrated real organic engagement
+        // on its own merits, independent of publisher/platform/franchise affiliation.
+        // As of v7.3.0 this applies ACROSS THE BOARD and stacks with every other
+        // multiplier in the system — see the extended rationale on isCriticalDarling()
+        // below. Deliberately the gentlest multiplier in the system, since clearing
+        // 100 reviews is itself already a strong, organic signal and doesn't need
+        // much help — it's a bonus on top of the fanboy-lens baseline, not a
+        // substitute for it.
+        const CRITICAL_DARLING_MIN_REVIEWS = 100;
+        const CRITICAL_DARLING_MULTIPLIER = 1.25;
 
         // v7.8.0: PopScore (v7.5.0-v7.7.x) has been removed from scoring. It was
         // an additive base-score contributor sourced from IGDB's
@@ -1043,9 +975,10 @@
             return publisherMatch || developerMatch;
         }
 
-        // v9.5.0: Valve/partner check, same shape as isSegaTitle — standalone
-        // tier, never folded into the Sony/Nintendo affiliated lists. See
-        // rationale on VALVE_PUBLISHERS above.
+        // Ported from the live v9.x line (v9.5.0): Valve/partner check, same
+        // shape as isSegaTitle — standalone tier, never folded into the
+        // Sony/Nintendo affiliated lists. See rationale on VALVE_PUBLISHERS
+        // above.
         function isValveTitle(game) {
             const publisherMatch = game.publishers && game.publishers.some(pub =>
                 VALVE_PUBLISHERS.some(v => pub.toLowerCase().includes(v))
@@ -1087,10 +1020,9 @@
             return isNintendoAffiliated(game) || isSonyAffiliated(game);
         }
 
-        function isCDiNintendoTitle(game) {
-            if (!game.platforms || !game.slug) return false;
-            return game.platforms.includes(CDI_PLATFORM_ID) &&
-                CDI_NINTENDO_SLUGS.some(s => game.slug.includes(s));
+        function isCDiTitle(game) {
+            if (!game.platforms) return false;
+            return game.platforms.includes(CDI_PLATFORM_ID);
         }
 
         function isVirtualBoyTitle(game) {
@@ -1125,23 +1057,29 @@
             );
         }
 
-        // v8.3.0: percentile helper. Ranks each item in `items` by
-        // `valueFn(item)` and returns a Map from item -> percentile (0-100,
-        // where 100 = highest value in the set). Ties share the same
-        // percentile (computed by rank position, not dense rank, so a run of
-        // identical values still spreads slightly by array order — acceptable
-        // for this use since exact ties are rare on both hype and critic
-        // score axes at this data volume).
-        function computePercentiles(items, valueFn) {
-            const map = new Map();
-            const n = items.length;
-            if (n === 0) return map;
-            if (n === 1) { map.set(items[0], 100); return map; }
-            const sorted = [...items].sort((a, b) => valueFn(a) - valueFn(b));
-            sorted.forEach((item, i) => {
-                map.set(item, (i / (n - 1)) * 100);
-            });
-            return map;
+        // v7.9.8: REVERTED to exclusion-list behavior (pre-v7.3.0). Critical
+        // Darling now only applies when no other multiplier in the system has
+        // fired for this title — it no longer stacks with affiliated/Pillar/
+        // Namco/Sega/Nintendo-IP/CDi/VB/WS/Digital Pictures boosts. Rationale:
+        // with Namco and Sega recalibrated upward (v7.9.7) to sit closer to
+        // Ubisoft's standalone rate, letting Critical Darling stack on top of
+        // those already-large multipliers risked over-separating top-tier
+        // affiliated titles from each other on a dimension (organic reviews)
+        // that the affiliated boost isn't meant to measure in the first place.
+        // Reverting to exclusion-only keeps quality-based differentiation for
+        // completely unaffiliated titles (Clair Obscur, Balatro, Hades, Animal
+        // Well) — the "proved itself with the crowd, no franchise/publisher
+        // help needed" case this boost was originally built for — while
+        // affiliated titles are judged purely on their affiliation tier.
+        // Known trade-off, explicitly accepted: two titles from the same
+        // affiliated bucket (e.g. two Nintendo-affiliated games) with identical
+        // base engagement but very different reception will now score
+        // identically on this axis, since the affiliated boost already fired
+        // and blocks Critical Darling from adding anything further. If that
+        // proves to be a problem in practice, the v7.3.0 stacking version is
+        // preserved in version history.
+        function isCriticalDarling(game) {
+            return !!game.reviews && game.reviews >= CRITICAL_DARLING_MIN_REVIEWS;
         }
 
         function displayGames(gamesList) {
@@ -1153,94 +1091,139 @@
                 return isCorrectPlatform && !isBlacklistedCategory;
             });
 
-            // --- Pass 1: hypeScore, exactly the v8.1.0/v8.2.0 pipeline, MINUS
-            // Critical Darling. Every other multiplier (sports/major league/
-            // mainstream/affiliated/Namco/Sega/Pillar/Nintendo IP/CDI/VB/WS/
-            // Digital Pictures) still applies unchanged.
             filtered.forEach(game => {
                 let score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0);
+                // v7.9.8: tracks whether ANY other multiplier fired for this title,
+                // so Critical Darling can be gated to exclusion-only below.
+                let hasOtherBoost = false;
 
+                // Standard sports genre boost
                 if (game.genres && game.genres.includes(GENRE_SPORT_ID)) {
                     score = Math.round(score * SPORT_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v5.3.0: Additional major league boost for chronically underrepresented
+                // console-dominant sports franchises. Applied after sports multiplier.
                 if (isMajorLeagueTitle(game)) {
                     score = Math.round(score * MAJOR_LEAGUE_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v5.4.4: Mainstream title boost for franchises with massive cultural
+                // penetration that IGDB systematically underweights. Gentler than the
+                // sports correction — these titles do appear in the data, they're just
+                // underrepresented relative to their true "everyone is playing this" footprint.
                 if (isMainstreamTitle(game)) {
                     score = Math.round(score * MAINSTREAM_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v7.4.0: Affiliated publisher boost — now split by lineage. A game
+                // affiliated with both lists (shouldn't happen given how the lists are
+                // partitioned, but handled safely via else-if) gets the Nintendo rate,
+                // since Nintendo affiliation is checked first.
                 if (isNintendoAffiliated(game)) {
                     score = Math.round(score * NINTENDO_AFFILIATED_MULTIPLIER);
+                    hasOtherBoost = true;
                 } else if (isSonyAffiliated(game)) {
                     score = Math.round(score * SONY_AFFILIATED_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v5.4.8: Namco-specific additional boost applied after the base affiliated
+                // multiplier. Namco is handled separately because its Sony relationship
+                // is uniquely deep (PS1 hardware co-development, launch titles) but stops
+                // short of full ownership.
                 if (isNamcoTitle(game)) {
                     score = Math.round(score * NAMCO_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v7.9.7: Sega/Atlus-specific boost, stacked on the same terms as
+                // Namco — standalone tier, applied independently of the Sony/
+                // Nintendo affiliated lists. See rationale on SEGA_PUBLISHERS above.
                 if (isSegaTitle(game)) {
                     score = Math.round(score * SEGA_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // Ported from the live v9.x line (v9.5.0): Valve/partner
+                // boost, standalone tier applied independently of the Sony/
+                // Nintendo affiliated lists. See rationale on
+                // VALVE_PUBLISHERS above.
                 if (isValveTitle(game)) {
                     score = Math.round(score * VALVE_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v7.0.1: Pillar third-party boost — Square, Enix, Capcom, Konami.
+                // Gentle multiplier reflecting philosophical affiliation rather than
+                // structural data correction.
                 if (isPillarTitle(game)) {
                     score = Math.round(score * PILLAR_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v7.0.4: Nintendo franchise IP boost for sanctioned non-Nintendo-published
+                // titles. Fires when slug contains Nintendo IP AND the publisher is not
+                // already getting the affiliated boost — EXCEPT Ubisoft, who is both
+                // affiliated (via Broderbund/Apple lineage) AND a sanctioned Nintendo IP
+                // partner (Mario + Rabbids, Starlink), so deserves both boosts.
+                // CDi titles excluded since they have their own dedicated boost.
                 const isUbisoftTitle = game.publishers && game.publishers.some(p => p.toLowerCase().includes('ubisoft'));
-                if (isNintendoIPTitle(game) && (!isAffiliatedPublisher(game) || isUbisoftTitle) && !isCDiNintendoTitle(game)) {
+                if (isNintendoIPTitle(game) && (!isAffiliatedPublisher(game) || isUbisoftTitle) && !isCDiTitle(game)) {
                     score = Math.round(score * NINTENDO_IP_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
-                if (isCDiNintendoTitle(game)) {
+
+                // v5.6.8: CDi Nintendo title boost — Zelda/Mario CDi games were
+                // massive cultural moments despite poor quality and near-zero IGDB data.
+                if (isCDiTitle(game)) {
                     score = Math.round(score * CDI_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v5.6.8: Virtual Boy platform boost — loud, expensive, heavily marketed
+                // failure. Every 1995 Nintendo kid knew about this hardware.
                 if (isVirtualBoyTitle(game)) {
                     score = Math.round(score * VB_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v5.6.8: WonderSwan/WSC platform boost — genuine Japanese success with
+                // Nintendo/Sony/Namco DNA. IGDB's Western bias makes data near-zero.
                 if (isWonderSwanTitle(game)) {
                     score = Math.round(score * WS_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
+
+                // v5.6.9: Digital Pictures developer boost. Sony-founded FMV studio
+                // whose games (Night Trap, Sewer Shark) were at the center of 1992-1994
+                // congressional hearings and directly caused the creation of the ESRB.
+                // Enormous real-world cultural footprint, near-zero IGDB engagement.
                 if (isDigitalPicturesTitle(game)) {
                     score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER);
+                    hasOtherBoost = true;
                 }
 
-                game.hype_score_raw = score;
+                // v7.9.8: Critical Darling boost — REVERTED to exclusion-only. Only
+                // applies if nothing else above boosted this title. See extended
+                // rationale on isCriticalDarling() above.
+                if (!hasOtherBoost && isCriticalDarling(game)) {
+                    score = Math.round(score * CRITICAL_DARLING_MULTIPLIER);
+                }
+
+                game.hype_score = score;
             });
 
-            // Drop zero/negative-hype games before percentile-ranking, same
-            // as the old `hype_score > 0` filter — a game with no engagement
-            // at all shouldn't be in the percentile pool skewing the curve.
-            filtered = filtered.filter(game => game.hype_score_raw > 0);
+            filtered = filtered.filter(game => game.hype_score > 0);
+            filtered.sort((a, b) => b.hype_score - a.hype_score);
 
             if (!filtered.length) {
                 content.innerHTML = '<div class="loading">No records found for this year.</div>';
                 return;
             }
-
-            // --- Pass 2: percentile-rank on both axes, within THIS year's
-            // filtered pool only.
-            const hypePercentiles = computePercentiles(filtered, g => g.hype_score_raw);
-
-            const criticEligible = filtered.filter(g => (g.aggregatedRating || 0) > 0);
-            const criticPercentiles = computePercentiles(criticEligible, g => g.aggregatedRating);
-
-            // --- Pass 3: blend. Games with no critic data get their full
-            // weight redistributed to the hype axis rather than being
-            // penalized to a 0 criticPercentile — most retro/niche titles
-            // have no aggregated_rating in IGDB at all, and treating "no
-            // critic coverage" the same as "critics hated it" would bury
-            // the majority of the catalog for a data-availability reason,
-            // not a quality one.
-            filtered.forEach(game => {
-                const hypePct = hypePercentiles.get(game) || 0;
-                if (criticPercentiles.has(game)) {
-                    const criticPct = criticPercentiles.get(game);
-                    game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (criticPct * QUALITY_WEIGHT));
-                } else {
-                    game.hype_score = Math.round(hypePct);
-                }
-            });
-
-            filtered.sort((a, b) => b.hype_score - a.hype_score);
 
             const grid = document.createElement('div');
             grid.className = 'games-grid';
@@ -1256,9 +1239,9 @@
                     <div class="game-image-container">${game.cover ? `<img class="game-image" src="${coverUrl}" alt="${game.name} cover">` : ''}</div>
                     <div class="game-info">
                         <div class="game-title">${game.name}</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
-                            Score: <span class="engagement-value">${game.hype_score}</span>
-                        </div>
+                        <!-- <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
+                            Hype Score: <span class="engagement-value">${game.hype_score}</span>
+                        </div> -->
                         <div style="margin-top: 4px;">
                             ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}${isConfirmedSteamTitle(game) ? `<span class="platform-tag">${PLATFORM_NAMES[WINDOWS_PLATFORM_ID]}</span>` : ''}
                         </div>
