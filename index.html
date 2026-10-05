@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>What Should Noiseredux Play?</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
     <style>
         :root {
             --ps-blue: #003087;
@@ -15,22 +16,36 @@
         }
         body { background-color: var(--bg); color: var(--text); font-family: 'DM Sans', sans-serif; font-weight: 300; margin: 0; }
         .container { max-width: 1200px; margin: 0 auto; background: white; min-height: 100vh; box-shadow: 0 0 40px rgba(0,0,0,0.05); }
-        header { background: linear-gradient(135deg, var(--ps-blue) 0%, #001a4d 100%); border-bottom: 4px solid var(--nin-red); padding: 3rem 1.5rem; text-align: center; }
-        header h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 7vw, 4.2rem); color: #fff; line-height: 0.9; text-transform: uppercase; margin: 0; }
+        header { background: linear-gradient(135deg, var(--ps-blue) 0%, #001a4d 100%); border-bottom: 4px solid var(--nin-red); padding: 1rem 1.5rem; text-align: center; }
+        header h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(1.6rem, 4.5vw, 2.4rem); color: #fff; line-height: 0.9; text-transform: uppercase; margin: 0; }
         .version-tag { font-size: 0.8rem; letter-spacing: 0.3em; text-transform: uppercase; color: #ffffff; opacity: 0.8; margin-top: 0.75rem; font-weight: 500; }
-        .controls { background: #e2e2ea; padding: 15px; display: flex; justify-content: center; align-items: center; gap: 15px; }
-        .controls select { padding: 8px 20px; font-weight: 700; border: 2px solid var(--ps-blue); border-radius: 4px; color: var(--ps-blue); cursor: pointer; }
+        .controls { background: #e2e2ea; padding: 8px 15px; display: flex; justify-content: center; align-items: center; gap: 15px; }
+        .controls select { padding: 5px 16px; font-weight: 700; border: 2px solid var(--ps-blue); border-radius: 4px; color: var(--ps-blue); cursor: pointer; }
         .loading { text-align: center; padding: 80px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; color: var(--ps-blue); }
-        .games-grid { display: flex; flex-direction: column; gap: 12px; padding: 30px; max-width: 900px; margin: 0 auto; }
-        .game-card { background: white; border: 1px solid #dcdce8; border-radius: 8px; display: flex; align-items: center; padding: 14px; gap: 20px; text-decoration: none; color: inherit; transition: all 0.2s ease; }
+        .games-grid { display: flex; flex-direction: column; gap: 10px; padding: 15px 30px 30px; max-width: 900px; margin: 0 auto; }
+        .game-card { background: white; border: 1px solid #dcdce8; border-radius: 8px; display: flex; align-items: center; padding: 10px 14px; gap: 16px; text-decoration: none; color: inherit; transition: all 0.2s ease; }
+        .game-card.below-top5 { background: #ececf2; }
         .game-card:hover { transform: translateX(8px); border-color: var(--ps-blue-light); }
-        .game-rank { font-family: 'Bebas Neue', sans-serif; font-size: 2.2rem; color: var(--ps-blue); min-width: 65px; text-align: center; }
-        .game-image-container { width: 70px; height: 94px; background: #eee; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
+        .game-rank { font-family: 'Bebas Neue', sans-serif; font-size: 1.9rem; color: var(--ps-blue); min-width: 55px; text-align: center; }
+        .game-image-container { width: 56px; height: 75px; background: #eee; border-radius: 4px; overflow: hidden; flex-shrink: 0; }
         .game-image { width: 100%; height: 100%; object-fit: cover; }
-        .game-title { font-weight: 700; font-size: 1.2rem; color: var(--text); }
+        .game-title { font-weight: 700; font-size: 1.08rem; color: var(--text); line-height: 1.2; }
         .engagement-value { color: var(--nin-red); font-weight: 700; }
-        .platform-tag { background: #edf2f7; color: #4a5568; font-size: 0.65rem; padding: 3px 8px; border-radius: 4px; margin-right: 5px; text-transform: uppercase; font-weight: 700; border: 1px solid #cbd5e0; }
+        .platform-tag { background: #edf2f7; color: #4a5568; font-size: 0.63rem; padding: 2px 7px; border-radius: 4px; margin-right: 4px; text-transform: uppercase; font-weight: 700; border: 1px solid #cbd5e0; }
         footer { padding: 50px; text-align: center; color: var(--text-muted); font-size: 0.8rem; border-top: 1px solid #e2e2ea; }
+
+        /* Phone-only: rows were tiny on iPhone (non-Pro) — roughly 16
+           visible at once. Scaled up ~1.33x here to land closer to 12
+           visible. Scoped to this breakpoint only so desktop (tuned to show
+           exactly 5 top cards on a MacBook Neo) is unaffected. */
+        @media (max-width: 600px) {
+            .games-grid { gap: 14px; }
+            .game-card { padding: 14px 18px; gap: 21px; }
+            .game-rank { font-size: 2.5rem; min-width: 74px; }
+            .game-image-container { width: 75px; height: 100px; }
+            .game-title { font-size: 1.44rem; }
+            .platform-tag { font-size: 0.84rem; padding: 3px 9px; }
+        }
     </style>
 </head>
 <body>
@@ -44,140 +59,276 @@
         </div>
         <div id="content"></div>
         <footer>
-            Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB
-            <br><span style="font-size:0.65rem; opacity:0.5;">v19.0.0</span>
+            Built by noiseredux &nbsp;·&nbsp; Data sourced from an IGDB List, exported to CSV <br>
+            A personal want-to-play index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy.
         </footer>
     </div>
 
     <script>
-        const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
+        // --- CONFIG -----------------------------------------------------
+        // Must be the raw.githubusercontent.com URL, not a github.com/.../blob/
+        // page — the blob page serves HTML with no CORS headers, so fetch()
+        // will fail with an "Access-Control-Allow-Origin" error like the one
+        // above.
+        const CSV_URL = 'https://raw.githubusercontent.com/noiseredux/whatshouldnoisereduxplay/main/want-to-play.csv';
 
-        // --- v19.0.0: CRITIC-WEIGHTED SCORE BUILD ---
-        // Same confidence-weighting mechanism as v18 (a game's score is
-        // pulled toward the year's average in proportion to how few
-        // reviews it has relative to that year's most-reviewed game), but
-        // the underlying rating is no longer IGDB's own even total_rating
-        // blend â€” it's a custom blend where critic score counts more than
-        // user score:
-        //
-        //   blendedRating = (aggregatedRating * CRITIC_WEIGHT)
-        //                  + (rating * USER_WEIGHT)
-        //
-        //   confidence = reviews / maxReviewsThisYear   (1.0 = the year's
-        //                                                 most-reviewed game)
-        //   weighted   = confidence * blendedRating
-        //              + (1 - confidence) * C
-        //
-        //   C = mean blendedRating across this year's rated games
-        //
-        // If a game only has a user score or only a critic score, that one
-        // is used at full weight rather than penalizing it for the missing
-        // side (see blendedRating() below). CRITIC_WEIGHT/USER_WEIGHT are
-        // easy to retune if 65/35 doesn't feel right after testing.
-        const WINDOWS_PLATFORM_ID = 6;
+        const COVER_ART_URL = 'https://script.google.com/macros/s/AKfycbyUhqm3gLlqzSrK-tfxB-uHfTbUBfUwYiHxLmMJqeBPiADBHta1Eg2QUi-1UPtpZkrD/exec';
 
-        // Critic reviews are weighted more heavily than user reviews when
-        // both exist. If only one exists for a game, that one is used at
-        // full weight rather than being penalized for the missing side.
-        const CRITIC_WEIGHT = 0.65;
-        const USER_WEIGHT = 0.35;
+        const COVER_CACHE_KEY = 'noiseredux_cover_cache_v1';
+        const COVER_BATCH_SIZE = 100; // keep query-string length safely small per request
 
-        function isConfirmedSteamTitle(game) {
-            return !!game.steamAppId;
+        // Preferred-platform whitelist, matched against the CSV's platform
+        // *name* strings (the CSV has no numeric IGDB platform IDs to match
+        // on directly). Rules are checked in order, first match wins — more
+        // specific names (e.g. "Super Nintendo") are listed before generic
+        // ones (e.g. plain "Nintendo") so they don't get misclassified.
+        // Any platform not matched here is simply not shown.
+        const PLATFORM_RULES = [
+            { abbr: 'A2', keywords: ['apple ii'] },
+            { abbr: 'Mac', keywords: ['mac'] },
+            { abbr: 'LNX', keywords: ['linux'] },
+            { abbr: 'iOS', keywords: ['ios'] },
+            { abbr: 'STM', keywords: ['pc (microsoft windows)', 'microsoft windows'] },
+            { abbr: 'SNES', keywords: ['super nintendo', 'snes'] },
+            { abbr: 'NES', keywords: ['nintendo entertainment system', 'nes'] },
+            { abbr: 'SFC', keywords: ['super famicom', 'sfc'] },
+            { abbr: 'FC', keywords: ['famicom', 'family computer'] },
+            { abbr: 'N64', keywords: ['nintendo 64'] },
+            { abbr: 'GC', keywords: ['gamecube'] },
+            { abbr: 'WiiU', keywords: ['wii u'] },
+            { abbr: 'Wii', keywords: ['wii'] },
+            { abbr: 'NS2', keywords: ['switch 2'] },
+            { abbr: 'NS', keywords: ['nintendo switch'] },
+            { abbr: 'GBC', keywords: ['game boy color'] },
+            { abbr: 'GBA', keywords: ['game boy advance'] },
+            { abbr: 'GB', keywords: ['game boy'] },
+            { abbr: '3DS', keywords: ['3ds'] },
+            { abbr: 'DS', keywords: ['nintendo ds'] },
+            { abbr: 'MSX2', keywords: ['msx2'] },
+            { abbr: 'MSX', keywords: ['msx'] },
+            { abbr: '2600', keywords: ['2600'] },
+            { abbr: 'CV', keywords: ['colecovision'] },
+            { abbr: 'CDi', keywords: ['cd-i', 'cdi'] },
+            { abbr: 'SCD', keywords: ['sega cd', 'mega-cd', 'mega cd'] },
+            { abbr: 'WSC', keywords: ['wonderswan color'] },
+            { abbr: 'WS', keywords: ['wonderswan'] },
+            { abbr: 'VB', keywords: ['virtual boy'] },
+            { abbr: 'PS5', keywords: ['playstation 5'] },
+            { abbr: 'PS4', keywords: ['playstation 4'] },
+            { abbr: 'PS3', keywords: ['playstation 3'] },
+            { abbr: 'PS2', keywords: ['playstation 2'] },
+            { abbr: 'PSVR', keywords: ['playstation vr'] },
+            { abbr: 'PSP', keywords: ['playstation portable'] },
+            { abbr: 'PSV', keywords: ['playstation vita'] },
+            { abbr: 'PS1', keywords: ['playstation'] },
+            { abbr: 'FDS', keywords: ['disk system'] },
+            { abbr: 'X68k', keywords: ['x68000'] },
+            { abbr: 'X1', keywords: ['sharp x1'] },
+            { abbr: 'SV', keywords: ['supervision'] },
+            { abbr: 'TGCD', keywords: ['turbografx-cd', 'turbografx cd', 'pc engine cd'] },
+            { abbr: 'TG16', keywords: ['turbografx', 'pc engine'] },
+            { abbr: 'SG', keywords: ['sg-1000', 'sg1000'] },
+            { abbr: '32X', keywords: ['32x'] },
+            { abbr: 'SMS', keywords: ['master system'] },
+            { abbr: 'GG', keywords: ['game gear'] }
+        ];
+
+        // --- HELPERS ------------------------------------------------------
+        // Returns the preferred abbreviation for a platform name, or null if
+        // it's not on the whitelist (in which case it won't be shown at all).
+        function getPlatformAbbr(name) {
+            if (!name) return null;
+            const lower = name.toLowerCase();
+            for (const rule of PLATFORM_RULES) {
+                if (rule.keywords.some(k => lower.includes(k))) return rule.abbr;
+            }
+            return null;
         }
 
-        const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35, 3];
-        const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG', 3: 'LNX', 6: 'STM' };
+        function escapeHtml(str) {
+            const div = document.createElement('div');
+            div.textContent = str == null ? '' : str;
+            return div.innerHTML;
+        }
 
-        // IGDB Category Blacklist: 1=DLC, 2=Expansion, 3=Bundle, 4=Standalone Expansion, 5=Mod, 6=Episode, 7=Season
-        const BLACKLISTED_CATEGORIES = [1, 2, 3, 4, 5, 6, 7];
+        // The IGDB export stores these columns as JSON-array-looking strings,
+        // e.g. ["Nintendo Switch 2"] or ["Jul 23, 2026 (Worldwide [WW])"].
+        // Parse defensively since blank cells aren't valid JSON.
+        function parseJsonArrayField(raw) {
+            if (!raw) return [];
+            try {
+                const parsed = JSON.parse(raw);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
 
-        function populateYearDropdown() {
+        // We only care about the year, not the month/day, and a game can list
+        // several regional release dates. Pull every 4-digit year out of the
+        // field and use the earliest one.
+        function extractEarliestYear(releaseDateField) {
+            const dates = parseJsonArrayField(releaseDateField);
+            const text = dates.length ? dates.join(' ') : (releaseDateField || '');
+            const matches = text.match(/\b(19|20)\d{2}\b/g);
+            if (!matches) return null;
+            return Math.min(...matches.map(Number));
+        }
+
+        // --- COVER ART -------------------------------------------------------
+        // Cache shape in localStorage: { "348977": "abc123", ... } mapping
+        // IGDB game ID -> IGDB cover image_id. Covers essentially never change
+        // for a given game, so once fetched they're kept indefinitely and only
+        // re-requested for IDs the cache hasn't seen before.
+        function loadCoverCache() {
+            try {
+                const raw = localStorage.getItem(COVER_CACHE_KEY);
+                return raw ? JSON.parse(raw) : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function saveCoverCache(cache) {
+            try {
+                localStorage.setItem(COVER_CACHE_KEY, JSON.stringify(cache));
+            } catch (e) {
+                // localStorage full or unavailable — non-fatal, covers just
+                // won't persist between visits.
+                console.warn('Could not save cover cache:', e);
+            }
+        }
+
+        // Fetches covers for any game IDs not already in the cache, in
+        // batches, and merges the results back into (and returns) the cache.
+        async function fetchMissingCovers(allIds, cache) {
+            const missing = [...new Set(allIds)].filter(id => id != null && !(id in cache));
+            if (!missing.length) return cache;
+
+            for (let i = 0; i < missing.length; i += COVER_BATCH_SIZE) {
+                const batch = missing.slice(i, i + COVER_BATCH_SIZE);
+                try {
+                    const response = await fetch(`${COVER_ART_URL}?ids=${batch.join(',')}`);
+                    const data = await response.json();
+                    if (data && data.covers) {
+                        Object.assign(cache, data.covers);
+                    }
+                } catch (e) {
+                    console.warn('Cover art batch failed:', e);
+                    // Continue with remaining batches even if one fails.
+                }
+            }
+
+            saveCoverCache(cache);
+            return cache;
+        }
+
+        // --- LOAD + PARSE ---------------------------------------------------
+        async function loadGames() {
+            const content = document.getElementById('content');
+            content.innerHTML = '<div class="loading">Loading Index...</div>';
+            try {
+                const response = await fetch(`${CSV_URL}?_cb=${Date.now()}`);
+                if (!response.ok) throw new Error(`Fetch failed: ${response.status}`);
+                const csvText = await response.text();
+                const parsed = Papa.parse(csvText, { header: true, skipEmptyLines: true });
+
+                const gamesByYear = {};
+
+                parsed.data.forEach(row => {
+                    const year = extractEarliestYear(row.release_date);
+                    if (!year) return;
+
+                    const ratingRaw = row.rating ? row.rating.trim() : '';
+                    const rating = ratingRaw !== '' ? parseFloat(ratingRaw) : null;
+
+                    const gameId = row.id ? parseInt(row.id, 10) : null;
+
+                    const game = {
+                        id: (gameId !== null && !isNaN(gameId)) ? gameId : null,
+                        name: row.game,
+                        url: row.url,
+                        rating: (rating !== null && !isNaN(rating)) ? rating : null,
+                        platforms: parseJsonArrayField(row.platforms)
+                    };
+
+                    if (!gamesByYear[year]) gamesByYear[year] = [];
+                    gamesByYear[year].push(game);
+                });
+
+                // Sort each year: rated games descending by rating; unrated
+                // games pushed to the bottom, left in their original (CSV) order.
+                Object.keys(gamesByYear).forEach(year => {
+                    gamesByYear[year].sort((a, b) => {
+                        if (a.rating === null && b.rating === null) return 0;
+                        if (a.rating === null) return 1;
+                        if (b.rating === null) return -1;
+                        return b.rating - a.rating;
+                    });
+                });
+
+                window.__gamesByYear = gamesByYear;
+                populateYearDropdown(Object.keys(gamesByYear).map(Number));
+
+                const select = document.getElementById('yearSelect');
+
+                // Render immediately without covers so the list appears fast...
+                displayGames(gamesByYear[select.value] || []);
+
+                // ...then fetch any missing covers and re-render once they're in.
+                const allIds = Object.values(gamesByYear).flat().map(g => g.id);
+                window.__coverCache = await fetchMissingCovers(allIds, loadCoverCache());
+                displayGames(gamesByYear[select.value] || []);
+
+            } catch (e) {
+                console.error(e);
+                content.innerHTML = `<div class="loading" style="color:red">System Connection Error.</div>`;
+            }
+        }
+
+        function populateYearDropdown(years) {
             const select = document.getElementById('yearSelect');
-            for (let year = 2026; year >= 1977; year--) {
+            select.innerHTML = '';
+            years.sort((a, b) => b - a);
+            years.forEach(year => {
                 const opt = document.createElement('option');
                 opt.value = year; opt.textContent = year;
                 select.appendChild(opt);
-            }
-        }
-
-        // Blends user + critic scores with critic weighted more heavily.
-        // If only one side exists, that one is used at full weight rather
-        // than penalizing the game for missing data on the other axis. If
-        // NEITHER rating nor aggregatedRating is populated, falls back to
-        // IGDB's own totalRating â€” some games only have that pre-blended
-        // value populated and nothing in the two separate fields, and we
-        // don't want to drop them from the list entirely just because we
-        // can't split their score into weighted components.
-        function blendedRating(game) {
-            const userR = game.rating || 0;
-            const criticR = game.aggregatedRating || 0;
-            if (userR > 0 && criticR > 0) {
-                return (criticR * CRITIC_WEIGHT) + (userR * USER_WEIGHT);
-            }
-            if (criticR > 0) return criticR;
-            if (userR > 0) return userR;
-            return game.totalRating || 0;
-        }
-
-        // Computes this year's ceiling (max reviews) and prior mean rating
-        // (C), across all eligible (rated) games.
-        function computeYearStats(games) {
-            if (!games.length) return { C: 0, maxReviews: 0 };
-            const C = games.reduce((sum, g) => sum + g.blendedRating, 0) / games.length;
-            const maxReviews = games.reduce((max, g) => Math.max(max, g.reviews || 0), 0);
-            return { C, maxReviews };
+            });
         }
 
         function displayGames(gamesList) {
             const content = document.getElementById('content');
 
-            let filtered = gamesList.filter(game => {
-                const isCorrectPlatform = game.platforms.some(id => ALLOWED_PLATFORMS.includes(id)) || isConfirmedSteamTitle(game);
-                const isBlacklistedCategory = game.category && BLACKLISTED_CATEGORIES.includes(game.category);
-                return isCorrectPlatform && !isBlacklistedCategory;
-            });
-
-            filtered.forEach(game => { game.blendedRating = blendedRating(game); });
-
-            // Only games with an actual user or critic score can be ranked.
-            filtered = filtered.filter(game => game.blendedRating > 0);
-
-            if (!filtered.length) {
-                content.innerHTML = '<div class="loading">No rated records found for this year.</div>';
+            if (!gamesList.length) {
+                content.innerHTML = '<div class="loading">No records found for this year.</div>';
                 return;
             }
-
-            const { C, maxReviews } = computeYearStats(filtered);
-
-            filtered.forEach(game => {
-                const v = game.reviews || 0;
-                const confidence = maxReviews > 0 ? Math.min(v / maxReviews, 1) : 0;
-                game.confidence = confidence;
-                game.hype_score = Math.round((confidence * game.blendedRating) + ((1 - confidence) * C));
-            });
-
-            filtered.sort((a, b) => b.hype_score - a.hype_score);
 
             const grid = document.createElement('div');
             grid.className = 'games-grid';
 
-            filtered.forEach((game, index) => {
+            const coverCache = window.__coverCache || {};
+
+            gamesList.forEach((game, index) => {
                 const card = document.createElement('a');
-                card.className = 'game-card';
-                card.href = `https://www.igdb.com/games/${game.slug}`;
+                card.className = 'game-card' + (index >= 12 ? ' below-top5' : '');
+                card.href = game.url || '#';
                 card.target = '_blank';
-                const coverUrl = game.cover ? `https://images.igdb.com/igdb/image/upload/t_cover_small/${game.cover}.jpg` : '';
+                const imageId = game.id != null ? coverCache[game.id] : null;
+                const coverUrl = imageId ? `https://images.igdb.com/igdb/image/upload/t_cover_small/${imageId}.jpg` : '';
                 card.innerHTML = `
                     <div class="game-rank">#${index + 1}</div>
-                    <div class="game-image-container">${game.cover ? `<img class="game-image" src="${coverUrl}" alt="${game.name} cover">` : ''}</div>
+                    <div class="game-image-container">${coverUrl ? `<img class="game-image" src="${coverUrl}" alt="${escapeHtml(game.name)} cover">` : ''}</div>
                     <div class="game-info">
-                        <div class="game-title">${game.name}</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase;">
-                            Score: <span class="engagement-value">${game.hype_score}</span>
+                        <div class="game-title">${escapeHtml(game.name)}</div>
+                        <div style="font-size:0.85rem; color:var(--text-muted); text-transform:uppercase; margin-top:2px;">
+                            ${game.rating !== null
+                                ? `Rating: <span class="engagement-value">${game.rating.toFixed(1)}</span>`
+                                : '<span style="color:#aaa;">Unrated</span>'}
                         </div>
                         <div style="margin-top: 4px;">
-                            ${game.platforms.filter(id => ALLOWED_PLATFORMS.includes(id)).map(id => `<span class="platform-tag">${PLATFORM_NAMES[id] || id}</span>`).join('')}${isConfirmedSteamTitle(game) ? `<span class="platform-tag">${PLATFORM_NAMES[WINDOWS_PLATFORM_ID]}</span>` : ''}
+                            ${game.platforms.map(p => getPlatformAbbr(p)).filter(Boolean).map(abbr => `<span class="platform-tag">${escapeHtml(abbr)}</span>`).join('')}
                         </div>
                     </div>`;
                 grid.appendChild(card);
@@ -187,41 +338,11 @@
             content.appendChild(grid);
         }
 
-        async function fetchGames(year) {
-            const response = await fetch(`${GOOGLE_SCRIPT_URL}?year=${year}&_cb=${Date.now()}`);
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-            const text = await response.text();
-            try {
-                return JSON.parse(text);
-            } catch (parseErr) {
-                throw new Error('Non-JSON response from backend');
-            }
-        }
+        document.getElementById('yearSelect').addEventListener('change', e => {
+            displayGames(window.__gamesByYear[e.target.value] || []);
+        });
 
-        async function loadGames(year) {
-            const content = document.getElementById('content');
-            content.innerHTML = '<div class="loading">Loading Index...</div>';
-            try {
-                const data = await fetchGames(year);
-                displayGames(data.games || []);
-            } catch (firstErr) {
-                // One retry on a transient failure (bad JSON, timeout, etc.)
-                // before showing the user an error.
-                try {
-                    const data = await fetchGames(year);
-                    displayGames(data.games || []);
-                } catch (secondErr) {
-                    console.error(firstErr, secondErr);
-                    content.innerHTML = `<div class="loading" style="color:red">System Connection Error.</div>`;
-                }
-            }
-        }
-
-        populateYearDropdown();
-        document.getElementById('yearSelect').addEventListener('change', e => loadGames(e.target.value));
-        loadGames(2026);
+        loadGames();
     </script>
 </body>
 </html>
