@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.10.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.11.0</span>
         </footer>
     </div>
 
@@ -239,8 +239,39 @@
         const DIGITAL_PICTURES_MULTIPLIER = 22.0;
 
         // v9.7.0: Merit Badge boost for elite critical darlings (e.g., Metacritic 90+)
-        const MERIT_BADGE_THRESHOLD = 90;
-        const MERIT_BADGE_MULTIPLIER = 1.4;
+        // v9.11.0: now TIERED instead of a single 90+ threshold. The highest tier a game
+        // qualifies for applies (tiers do not stack with each other). 90+ keeps its
+        // original 1.4x; the others are first-pass values to tune. List must stay sorted
+        // from highest threshold to lowest.
+        const MERIT_BADGE_TIERS = [
+            { min: 95, multiplier: 2.0  },
+            { min: 90, multiplier: 1.4  },
+            { min: 85, multiplier: 1.25 },
+            { min: 80, multiplier: 1.12 }
+        ];
+        function meritBadgeMultiplier(rating) {
+            const tier = MERIT_BADGE_TIERS.find(t => rating >= t.min);
+            return tier ? tier.multiplier : 1;
+        }
+
+        // v9.11.0: Minimum-review gate for UNBOOSTED games. A game that received none of
+        // the boosts below (sport, major league, mainstream, Nintendo, Sony, Apple, Namco,
+        // Sega, Valve, Pillar, Nintendo IP, CD-i, VB, WS, Digital Pictures) is omitted
+        // unless it has at least this many total IGDB ratings (user + critic combined),
+        // looked up by release year. The Merit Badge DOES count as a boost for this
+        // purpose (test setting), but only when a tier applies (critic score 80+).
+        // Thresholds step down for older years, whose games have far fewer
+        // ratings on IGDB. First entry whose fromYear <= the year wins; keep sorted
+        // newest-first. Set a min to 0 to disable the gate for that era.
+        const MIN_REVIEWS_BY_ERA = [
+            { fromYear: 2010, min: 10 },
+            { fromYear: 2000, min: 7  },
+            { fromYear: 0,    min: 5  }
+        ];
+        function minReviewsForYear(year) {
+            const era = MIN_REVIEWS_BY_ERA.find(e => year >= e.fromYear);
+            return era ? era.min : 0;
+        }
 
         // v5.3.0: Major league sports titles receive an additional boost on top of
         // the standard SPORT_MULTIPLIER. These franchises have massive console-first
@@ -1236,7 +1267,7 @@
             return map;
         }
 
-        function displayGames(gamesList) {
+        function displayGames(gamesList, year) {
             const content = document.getElementById('content');
 
             let filtered = gamesList.filter(game => {
@@ -1251,60 +1282,70 @@
             // Digital Pictures/Merit Badge) still applies unchanged.
             filtered.forEach(game => {
                 let score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0);
+                let boosted = false;
+                const boost = (multiplier) => {
+                    score = Math.round(score * multiplier);
+                    boosted = true;
+                };
 
                 if (game.genres && game.genres.includes(GENRE_SPORT_ID)) {
-                    score = Math.round(score * SPORT_MULTIPLIER);
+                    boost(SPORT_MULTIPLIER);
                 }
                 if (isMajorLeagueTitle(game)) {
-                    score = Math.round(score * MAJOR_LEAGUE_MULTIPLIER);
+                    boost(MAJOR_LEAGUE_MULTIPLIER);
                 }
                 if (isMainstreamTitle(game)) {
-                    score = Math.round(score * MAINSTREAM_MULTIPLIER);
+                    boost(MAINSTREAM_MULTIPLIER);
                 }
                 // v9.8.0: Nintendo and Sony affiliation now STACK instead of
                 // being mutually exclusive. See rationale on
                 // NINTENDO_AFFILIATED_MULTIPLIER's section comment.
                 if (isNintendoAffiliated(game)) {
-                    score = Math.round(score * NINTENDO_AFFILIATED_MULTIPLIER);
+                    boost(NINTENDO_AFFILIATED_MULTIPLIER);
                 }
                 if (isSonyAffiliated(game)) {
-                    score = Math.round(score * SONY_AFFILIATED_MULTIPLIER);
+                    boost(SONY_AFFILIATED_MULTIPLIER);
                 }
                 if (isAppleAffiliated(game)) {
-                    score = Math.round(score * APPLE_AFFILIATED_MULTIPLIER);
+                    boost(APPLE_AFFILIATED_MULTIPLIER);
                 }
                 if (isNamcoTitle(game)) {
-                    score = Math.round(score * NAMCO_MULTIPLIER);
+                    boost(NAMCO_MULTIPLIER);
                 }
                 if (isSegaTitle(game)) {
-                    score = Math.round(score * SEGA_MULTIPLIER);
+                    boost(SEGA_MULTIPLIER);
                 }
                 if (isValveTitle(game)) {
-                    score = Math.round(score * VALVE_MULTIPLIER);
+                    boost(VALVE_MULTIPLIER);
                 }
                 if (isPillarTitle(game)) {
-                    score = Math.round(score * PILLAR_MULTIPLIER);
+                    boost(PILLAR_MULTIPLIER);
                 }
                 const isUbisoftTitle = game.publishers && game.publishers.some(p => p.toLowerCase().includes('ubisoft'));
                 if (isNintendoIPTitle(game) && (!isAffiliatedPublisher(game) || isUbisoftTitle) && !isCDiTitle(game)) {
-                    score = Math.round(score * NINTENDO_IP_MULTIPLIER);
+                    boost(NINTENDO_IP_MULTIPLIER);
                 }
                 if (isCDiTitle(game)) {
-                    score = Math.round(score * CDI_MULTIPLIER);
+                    boost(CDI_MULTIPLIER);
                 }
                 if (isVirtualBoyTitle(game)) {
-                    score = Math.round(score * VB_MULTIPLIER);
+                    boost(VB_MULTIPLIER);
                 }
                 if (isWonderSwanTitle(game)) {
-                    score = Math.round(score * WS_MULTIPLIER);
+                    boost(WS_MULTIPLIER);
                 }
                 if (isDigitalPicturesTitle(game)) {
-                    score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER);
+                    boost(DIGITAL_PICTURES_MULTIPLIER);
                 }
-                if ((game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
-                    score = Math.round(score * MERIT_BADGE_MULTIPLIER);
+                // v9.11.0 (test): the Merit Badge counts as a boost for the minimum-review
+                // gate, but only when a tier actually applies (rating 80+). A game with no
+                // critic score, or one below 80, is not exempted by it.
+                const meritMult = meritBadgeMultiplier(game.aggregatedRating || 0);
+                if (meritMult > 1) {
+                    boost(meritMult);
                 }
 
+                game.boosted = boosted;
                 game.hype_score_raw = score;
             });
 
@@ -1312,6 +1353,12 @@
             // as the old `hype_score > 0` filter — a game with no engagement
             // at all shouldn't be in the percentile pool skewing the curve.
             filtered = filtered.filter(game => game.hype_score_raw > 0);
+
+            // v9.11.0: minimum-review gate for unboosted games (see MIN_REVIEWS_BY_ERA).
+            const minReviews = minReviewsForYear(year);
+            const beforeGate = filtered.length;
+            filtered = filtered.filter(game => game.boosted || (game.reviews || 0) >= minReviews);
+            console.info(`[review gate] ${year}: min ${minReviews}, omitted ${beforeGate - filtered.length} of ${beforeGate} unboosted games`);
 
             if (!filtered.length) {
                 content.innerHTML = '<div class="loading">No records found for this year.</div>';
@@ -1375,7 +1422,7 @@
             try {
                 const response = await fetch(`${GOOGLE_SCRIPT_URL}?year=${year}&_cb=${Date.now()}`);
                 const data = await response.json();
-                displayGames(data.games || []);
+                displayGames(data.games || [], parseInt(year));
             } catch (e) {
                 console.error(e);
                 content.innerHTML = `<div class="loading" style="color:red">System Connection Error.</div>`;
