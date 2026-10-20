@@ -45,14 +45,14 @@
         <div id="content"></div>
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB
-            <br><span style="font-size:0.65rem; opacity:0.5;">v21.0.0</span>
+            <br><span style="font-size:0.65rem; opacity:0.5;">v22.0.0</span>
         </footer>
     </div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
 
-        // --- v21.0.0: CRITIC-WEIGHTED SCORE BUILD (count-based, median-anchored) ---
+        // --- v22.0.0: CRITIC-WEIGHTED SCORE BUILD (count-based, top-N pool) ---
         // Each game's rating is a review-count-weighted blend of its user
         // score and critic score, where ONE critic review counts as much
         // as TEN user reviews:
@@ -70,8 +70,16 @@
         //   weighted   = confidence * blendedRating + (1 - confidence) * C
         //
         //   v = this game's effective review count
-        //   m = MEDIAN effective review count across this year's rated games
-        //   C = mean blendedRating across this year's rated games
+        //   m = MEDIAN effective review count across this year's candidate pool
+        //   C = mean blendedRating across this year's candidate pool
+        //
+        // CANDIDATE POOL (v22): before any scoring, each year is cut down
+        // to its TOP_N_PER_YEAR most-reviewed rated games (by effective
+        // review count). Without this, the long tail of obscure games with
+        // 1-3 reviews drags the median to near zero, so a 3-review game
+        // with a high score gets near-full confidence and clogs the list.
+        // The cut is year-relative, so sparse early years keep essentially
+        // everything while crowded modern years keep only what got attention.
         //
         // Using the median (not the year's top game) means one runaway hit
         // can't drag everyone else's confidence toward zero, and it adapts
@@ -87,6 +95,10 @@
         const WINDOWS_PLATFORM_ID = 6;
 
         const CRITIC_REVIEW_MULTIPLIER = 10;
+
+        // How many games per year (ranked by effective review count) are
+        // allowed to compete. Raise for a longer, more inclusive list.
+        const TOP_N_PER_YEAR = 100;
 
         function isConfirmedSteamTitle(game) {
             return !!game.steamAppId;
@@ -162,6 +174,10 @@
                 content.innerHTML = '<div class="loading">No rated records found for this year.</div>';
                 return;
             }
+
+            // Candidate pool: only the year's most-reviewed games compete.
+            filtered.sort((a, b) => (b.effectiveReviews || 0) - (a.effectiveReviews || 0));
+            filtered = filtered.slice(0, TOP_N_PER_YEAR);
 
             const { C, m } = computeYearStats(filtered);
 
