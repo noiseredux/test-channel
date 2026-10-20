@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.10.0</span>
         </footer>
     </div>
 
@@ -128,11 +128,7 @@
         // note above about the Sony bucket holding Apple is obsolete (the Linux
         // landscape-builders still live in the Sony bucket). Nintendo, Sony and
         // Apple lineage boosts all stack independently.
-        // v9.11.0: Nintendo raised 8.25 -> 11.25 (3x the Sony/Apple rate of 3.75) as a
-        // starting point for further tuning; first-party Nintendo was still reading as
-        // under-represented in the control Top 25s. Supersedes the 2.2x ratio above.
-        // A dual-lineage title now stacks 11.25 * 3.75 ~= 42.2x.
-        const NINTENDO_AFFILIATED_MULTIPLIER = 11.25;
+        const NINTENDO_AFFILIATED_MULTIPLIER = 8.25;
         const SONY_AFFILIATED_MULTIPLIER = 3.75;
         // v9.10.0: Apple/related is its own bucket with its own multiplier. Set equal
         // to Sony's rate (3.75) so that, for any title matching only the Apple list,
@@ -873,11 +869,7 @@
         // those early titles would get no Namco treatment at all despite being the
         // literal predecessor studio to Namco's RPG division.
         const NAMCO_DEVELOPERS = ['wolf team'];
-        // v9.11.0: raised 2.5 -> 3.75 for parity with Sony's own rate. Namco is treated as
-        // being as important to Sony's early history as Sony itself, and 2.5 was too low in
-        // practice. Deliberately above Sega's 3.5, since Namco is judged the more central
-        // part of the lineage.
-        const NAMCO_MULTIPLIER = 3.75;
+        const NAMCO_MULTIPLIER = 2.5;
 
         // v7.9.7: Sega gets its own tier, on the same terms as Namco — a deep,
         // decades-long partner that was never owned by Sony, but whose relationship
@@ -1075,15 +1067,6 @@
         // directly rather than through the blend.
         const HYPE_WEIGHT = 0.75;
         const QUALITY_WEIGHT = 0.25;
-
-        // v9.12.0 TEST SWITCHES: mute the critic-driven ("Critical Darling") logic to see
-        // how the multiplier tuning reads without it. Flip back to true to restore.
-        //   CRITIC_BLEND_ENABLED: when false, final score = hype percentile alone
-        //     (effective weights 1.0 / 0.0); critic percentiles are ignored.
-        //   MERIT_BADGE_ENABLED: when false, the 1.4x boost for 90+ critic scores is skipped.
-        // The two are independent, so either can be re-enabled on its own.
-        const CRITIC_BLEND_ENABLED = false;
-        const MERIT_BADGE_ENABLED = false;
 
 
         // v7.8.0: PopScore (v7.5.0-v7.7.x) has been removed from scoring. It was
@@ -1318,7 +1301,7 @@
                 if (isDigitalPicturesTitle(game)) {
                     score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER);
                 }
-                if (MERIT_BADGE_ENABLED && (game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
+                if ((game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
                     score = Math.round(score * MERIT_BADGE_MULTIPLIER);
                 }
 
@@ -1353,15 +1336,10 @@
                     ? criticPercentiles.get(game) 
                     : NEUTRAL_CRITIC_PERCENTILE;
                     
-                const hypeW = CRITIC_BLEND_ENABLED ? HYPE_WEIGHT : 1;
-                const qualityW = CRITIC_BLEND_ENABLED ? QUALITY_WEIGHT : 0;
-                game.hype_score = Math.round((hypePct * hypeW) + (criticPct * qualityW));
+                game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (criticPct * QUALITY_WEIGHT));
             });
 
-            // v9.12.0: break ties on the raw (pre-percentile) score. Rounded percentiles tie
-            // often, especially with the critic blend off, and the old stable sort left tied
-            // games in arbitrary backend order.
-            filtered.sort((a, b) => (b.hype_score - a.hype_score) || (b.hype_score_raw - a.hype_score_raw));
+            filtered.sort((a, b) => b.hype_score - a.hype_score);
 
             const grid = document.createElement('div');
             grid.className = 'games-grid';
