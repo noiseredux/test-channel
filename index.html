@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.11.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.0</span>
         </footer>
     </div>
 
@@ -1076,6 +1076,15 @@
         const HYPE_WEIGHT = 0.75;
         const QUALITY_WEIGHT = 0.25;
 
+        // v9.12.0 TEST SWITCHES: mute the critic-driven ("Critical Darling") logic to see
+        // how the multiplier tuning reads without it. Flip back to true to restore.
+        //   CRITIC_BLEND_ENABLED: when false, final score = hype percentile alone
+        //     (effective weights 1.0 / 0.0); critic percentiles are ignored.
+        //   MERIT_BADGE_ENABLED: when false, the 1.4x boost for 90+ critic scores is skipped.
+        // The two are independent, so either can be re-enabled on its own.
+        const CRITIC_BLEND_ENABLED = false;
+        const MERIT_BADGE_ENABLED = false;
+
 
         // v7.8.0: PopScore (v7.5.0-v7.7.x) has been removed from scoring. It was
         // an additive base-score contributor sourced from IGDB's
@@ -1309,7 +1318,7 @@
                 if (isDigitalPicturesTitle(game)) {
                     score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER);
                 }
-                if ((game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
+                if (MERIT_BADGE_ENABLED && (game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
                     score = Math.round(score * MERIT_BADGE_MULTIPLIER);
                 }
 
@@ -1344,10 +1353,15 @@
                     ? criticPercentiles.get(game) 
                     : NEUTRAL_CRITIC_PERCENTILE;
                     
-                game.hype_score = Math.round((hypePct * HYPE_WEIGHT) + (criticPct * QUALITY_WEIGHT));
+                const hypeW = CRITIC_BLEND_ENABLED ? HYPE_WEIGHT : 1;
+                const qualityW = CRITIC_BLEND_ENABLED ? QUALITY_WEIGHT : 0;
+                game.hype_score = Math.round((hypePct * hypeW) + (criticPct * qualityW));
             });
 
-            filtered.sort((a, b) => b.hype_score - a.hype_score);
+            // v9.12.0: break ties on the raw (pre-percentile) score. Rounded percentiles tie
+            // often, especially with the critic blend off, and the old stable sort left tied
+            // games in arbitrary backend order.
+            filtered.sort((a, b) => (b.hype_score - a.hype_score) || (b.hype_score_raw - a.hype_score_raw));
 
             const grid = document.createElement('div');
             grid.className = 'games-grid';
