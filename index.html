@@ -45,14 +45,14 @@
         <div id="content"></div>
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB
-            <br><span style="font-size:0.65rem; opacity:0.5;">v22.0.0</span>
+            <br><span style="font-size:0.65rem; opacity:0.5;">v23.0.0</span>
         </footer>
     </div>
 
     <script>
         const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwdEO6cjjiA_Xr4pmkdb9m2wENhSUBd9rdekTHZw_MHRu7Xu5V6ry74rmTKe-I9KXz0/exec';
 
-        // --- v22.0.0: CRITIC-WEIGHTED SCORE BUILD (count-based, top-N pool) ---
+        // --- v23.0.0: CRITIC-WEIGHTED SCORE BUILD (count-based, review-evidence gate) ---
         // Each game's rating is a review-count-weighted blend of its user
         // score and critic score, where ONE critic review counts as much
         // as TEN user reviews:
@@ -70,16 +70,20 @@
         //   weighted   = confidence * blendedRating + (1 - confidence) * C
         //
         //   v = this game's effective review count
-        //   m = MEDIAN effective review count across this year's candidate pool
-        //   C = mean blendedRating across this year's candidate pool
+        //   m = MEDIAN effective review count across this year's gated games,
+        //       times CONFIDENCE_SCALE (lower = trust a game's own score sooner)
+        //   C = mean blendedRating across this year's gated games
         //
-        // CANDIDATE POOL (v22): before any scoring, each year is cut down
-        // to its TOP_N_PER_YEAR most-reviewed rated games (by effective
-        // review count). Without this, the long tail of obscure games with
-        // 1-3 reviews drags the median to near zero, so a 3-review game
-        // with a high score gets near-full confidence and clogs the list.
-        // The cut is year-relative, so sparse early years keep essentially
-        // everything while crowded modern years keep only what got attention.
+        // EVIDENCE GATE (v23): modeled on Metacritic, which refuses to list
+        // a title until it has a minimum number of critic reviews, then
+        // ranks the survivors. Here, a game must reach MIN_EFFECTIVE_REVIEWS
+        // (user reviews + 10 x critic reviews) to be listed at all. There is
+        // NO cap on how many games a year can show. Because sparse years
+        // (early console eras) have little review data, a year that would
+        // keep fewer than MIN_GAMES_PER_YEAR games falls back to its
+        // MIN_GAMES_PER_YEAR most-reviewed games instead, so no year goes
+        // empty. Thresholds are on IGDB's counts, which run far lower than
+        // Metacritic's (a game with ~75 Metacritic critics may show 1 on IGDB).
         //
         // Using the median (not the year's top game) means one runaway hit
         // can't drag everyone else's confidence toward zero, and it adapts
@@ -96,9 +100,17 @@
 
         const CRITIC_REVIEW_MULTIPLIER = 10;
 
-        // How many games per year (ranked by effective review count) are
-        // allowed to compete. Raise for a longer, more inclusive list.
-        const TOP_N_PER_YEAR = 100;
+        // Minimum review evidence (user reviews + 10 x critic reviews) for a
+        // game to be listed. Raise to cut obscure games, lower to include more.
+        const MIN_EFFECTIVE_REVIEWS = 20;
+
+        // Floor so sparse years never look empty: if fewer games than this
+        // clear the gate, the year shows its most-reviewed games instead.
+        const MIN_GAMES_PER_YEAR = 25;
+
+        // Scales the confidence curve's m. Below 1 trusts a game's own score
+        // sooner (newer games penalized less); above 1 pulls harder to average.
+        const CONFIDENCE_SCALE = 0.5;
 
         function isConfirmedSteamTitle(game) {
             return !!game.steamAppId;
@@ -148,7 +160,7 @@
         function computeYearStats(games) {
             if (!games.length) return { C: 0, m: 0 };
             const C = games.reduce((sum, g) => sum + g.blendedRating, 0) / games.length;
-            const m = median(games.map(g => g.effectiveReviews || 0));
+            const m = median(games.map(g => g.effectiveReviews || 0)) * CONFIDENCE_SCALE;
             return { C, m };
         }
 
@@ -175,9 +187,10 @@
                 return;
             }
 
-            // Candidate pool: only the year's most-reviewed games compete.
+            // Evidence gate (see header comment). No cap on how many pass.
             filtered.sort((a, b) => (b.effectiveReviews || 0) - (a.effectiveReviews || 0));
-            filtered = filtered.slice(0, TOP_N_PER_YEAR);
+            const gated = filtered.filter(g => (g.effectiveReviews || 0) >= MIN_EFFECTIVE_REVIEWS);
+            filtered = gated.length >= MIN_GAMES_PER_YEAR ? gated : filtered.slice(0, MIN_GAMES_PER_YEAR);
 
             const { C, m } = computeYearStats(filtered);
 
