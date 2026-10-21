@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.10.1</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.11.0</span>
         </footer>
     </div>
 
@@ -239,6 +239,19 @@
         // the ESRB exists. Same multiplier as the planned controversy boost.
         const DIGITAL_PICTURES_DEVELOPERS = ['digital pictures'];
         const DIGITAL_PICTURES_MULTIPLIER = 22.0;
+
+        // v9.11.0: review weighting. The base score is
+        //   (userReviews + criticReviews * criticUnits) * REVIEW_WEIGHT + follows + hypes
+        // where each critic review counts as `criticUnits` ordinary reviews. Previously
+        // every rating (user or critic) was simply total * 3, with no critic distinction.
+        // Critics count more because they are scarce and far more selective than user
+        // ratings. Games that earn NO affiliation/franchise/platform boost get a larger
+        // critic weight, so big indies (Hades II, Mina the Hollower, etc.) with a handful
+        // of critic reviews are not drowned out by boosted catalog. Requires backend
+        // v5.5.4+, which supplies criticReviews/userReviews.
+        const REVIEW_WEIGHT = 3;                      // unchanged from the old `reviews * 3`
+        const CRITIC_REVIEW_EQUIVALENT = 10;          // 1 critic review = 10 reviews (boosted games)
+        const UNBOOSTED_CRITIC_REVIEW_EQUIVALENT = 20; // 1 critic review = 20 reviews (no boost)
 
         // v9.7.0: Merit Badge boost for elite critical darlings (e.g., Metacritic 90+)
         const MERIT_BADGE_THRESHOLD = 90;
@@ -1238,6 +1251,72 @@
             return map;
         }
 
+        // v9.11.0: the affiliation/franchise/platform boost chain, extracted from the
+        // scoring loop so it can run twice per game: once as a probe to learn whether ANY
+        // boost applies (which decides how heavily critic reviews count; see
+        // CRITIC_REVIEW_EQUIVALENT), and once on the real base score. Boost order and
+        // per-step rounding are unchanged. The Merit Badge is deliberately NOT part of
+        // this chain or of the "boosted" test: it is critic-driven, so counting it would
+        // double-dip on the critic weighting.
+        function applyAffiliationBoosts(game, startScore) {
+            let score = startScore;
+            let boosted = false;
+            const boost = (multiplier) => {
+                score = Math.round(score * multiplier);
+                boosted = true;
+            };
+            if (game.genres && game.genres.includes(GENRE_SPORT_ID)) {
+                boost(SPORT_MULTIPLIER);
+            }
+            if (isMajorLeagueTitle(game)) {
+                boost(MAJOR_LEAGUE_MULTIPLIER);
+            }
+            if (isMainstreamTitle(game)) {
+                boost(MAINSTREAM_MULTIPLIER);
+            }
+            // v9.8.0: Nintendo and Sony affiliation now STACK instead of
+            // being mutually exclusive. See rationale on
+            // NINTENDO_AFFILIATED_MULTIPLIER's section comment.
+            if (isNintendoAffiliated(game)) {
+                boost(NINTENDO_AFFILIATED_MULTIPLIER);
+            }
+            if (isSonyAffiliated(game)) {
+                boost(SONY_AFFILIATED_MULTIPLIER);
+            }
+            if (isAppleAffiliated(game)) {
+                boost(APPLE_AFFILIATED_MULTIPLIER);
+            }
+            if (isNamcoTitle(game)) {
+                boost(NAMCO_MULTIPLIER);
+            }
+            if (isSegaTitle(game)) {
+                boost(SEGA_MULTIPLIER);
+            }
+            if (isValveTitle(game)) {
+                boost(VALVE_MULTIPLIER);
+            }
+            if (isPillarTitle(game)) {
+                boost(PILLAR_MULTIPLIER);
+            }
+            const isUbisoftTitle = game.publishers && game.publishers.some(p => p.toLowerCase().includes('ubisoft'));
+            if (isNintendoIPTitle(game) && (!isAffiliatedPublisher(game) || isUbisoftTitle) && !isCDiTitle(game)) {
+                boost(NINTENDO_IP_MULTIPLIER);
+            }
+            if (isCDiTitle(game)) {
+                boost(CDI_MULTIPLIER);
+            }
+            if (isVirtualBoyTitle(game)) {
+                boost(VB_MULTIPLIER);
+            }
+            if (isWonderSwanTitle(game)) {
+                boost(WS_MULTIPLIER);
+            }
+            if (isDigitalPicturesTitle(game)) {
+                boost(DIGITAL_PICTURES_MULTIPLIER);
+            }
+            return { score, boosted };
+        }
+
         function displayGames(gamesList) {
             const content = document.getElementById('content');
 
@@ -1252,57 +1331,23 @@
             // mainstream/affiliated/Namco/Sega/Pillar/Nintendo IP/CDI/VB/WS/
             // Digital Pictures/Merit Badge) still applies unchanged.
             filtered.forEach(game => {
-                let score = ((game.reviews || 0) * 3) + (game.follows || 0) + (game.hypes || 0);
+                let score;
 
-                if (game.genres && game.genres.includes(GENRE_SPORT_ID)) {
-                    score = Math.round(score * SPORT_MULTIPLIER);
+                // v9.11.0: critic/user review weighting (see REVIEW_WEIGHT below). The
+                // probe call only determines whether any boost applies to this game.
+                const probe = applyAffiliationBoosts(game, 1);
+                let reviewUnits;
+                if (game.criticReviews !== undefined) {
+                    const criticUnits = probe.boosted
+                        ? CRITIC_REVIEW_EQUIVALENT
+                        : UNBOOSTED_CRITIC_REVIEW_EQUIVALENT;
+                    reviewUnits = (game.userReviews || 0) + ((game.criticReviews || 0) * criticUnits);
+                } else {
+                    // Older backend (pre-v5.5.4) with no critic/user split: legacy formula.
+                    reviewUnits = game.reviews || 0;
                 }
-                if (isMajorLeagueTitle(game)) {
-                    score = Math.round(score * MAJOR_LEAGUE_MULTIPLIER);
-                }
-                if (isMainstreamTitle(game)) {
-                    score = Math.round(score * MAINSTREAM_MULTIPLIER);
-                }
-                // v9.8.0: Nintendo and Sony affiliation now STACK instead of
-                // being mutually exclusive. See rationale on
-                // NINTENDO_AFFILIATED_MULTIPLIER's section comment.
-                if (isNintendoAffiliated(game)) {
-                    score = Math.round(score * NINTENDO_AFFILIATED_MULTIPLIER);
-                }
-                if (isSonyAffiliated(game)) {
-                    score = Math.round(score * SONY_AFFILIATED_MULTIPLIER);
-                }
-                if (isAppleAffiliated(game)) {
-                    score = Math.round(score * APPLE_AFFILIATED_MULTIPLIER);
-                }
-                if (isNamcoTitle(game)) {
-                    score = Math.round(score * NAMCO_MULTIPLIER);
-                }
-                if (isSegaTitle(game)) {
-                    score = Math.round(score * SEGA_MULTIPLIER);
-                }
-                if (isValveTitle(game)) {
-                    score = Math.round(score * VALVE_MULTIPLIER);
-                }
-                if (isPillarTitle(game)) {
-                    score = Math.round(score * PILLAR_MULTIPLIER);
-                }
-                const isUbisoftTitle = game.publishers && game.publishers.some(p => p.toLowerCase().includes('ubisoft'));
-                if (isNintendoIPTitle(game) && (!isAffiliatedPublisher(game) || isUbisoftTitle) && !isCDiTitle(game)) {
-                    score = Math.round(score * NINTENDO_IP_MULTIPLIER);
-                }
-                if (isCDiTitle(game)) {
-                    score = Math.round(score * CDI_MULTIPLIER);
-                }
-                if (isVirtualBoyTitle(game)) {
-                    score = Math.round(score * VB_MULTIPLIER);
-                }
-                if (isWonderSwanTitle(game)) {
-                    score = Math.round(score * WS_MULTIPLIER);
-                }
-                if (isDigitalPicturesTitle(game)) {
-                    score = Math.round(score * DIGITAL_PICTURES_MULTIPLIER);
-                }
+                score = (reviewUnits * REVIEW_WEIGHT) + (game.follows || 0) + (game.hypes || 0);
+                score = applyAffiliationBoosts(game, score).score;
                 if ((game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
                     score = Math.round(score * MERIT_BADGE_MULTIPLIER);
                 }
