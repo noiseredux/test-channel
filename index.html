@@ -98,7 +98,7 @@
 
         // --- Scoring constants ---
         const GENRE_SPORT_ID = 14;
-        const SPORT_MULTIPLIER = 2.5;
+        const SPORT_MULTIPLIER = 3.0;
         // v7.4.2: Nintendo multiplier recalibrated again to 2.2x Sony's rate
         // (3.75 * 2.2 = 8.25). Rationale: two independent test cases converged on
         // roughly this same ratio — Animal Crossing: New Horizons needing ~2.22x
@@ -130,7 +130,7 @@
         // note above about the Sony bucket holding Apple is obsolete (the Linux
         // landscape-builders still live in the Sony bucket). Nintendo, Sony and
         // Apple lineage boosts all stack independently.
-        const NINTENDO_AFFILIATED_MULTIPLIER = 8.25;
+        const NINTENDO_AFFILIATED_MULTIPLIER = 11.25;
         const SONY_AFFILIATED_MULTIPLIER = 3.75;
         // v9.10.0: Apple/related is its own bucket with its own multiplier. Set equal
         // to Sony's rate (3.75) so that, for any title matching only the Apple list,
@@ -152,7 +152,7 @@
         // strong organic IGDB engagement — this is a philosophical statement rather than
         // a structural data correction.
         const PILLAR_PUBLISHERS = ['square', 'enix', 'capcom', 'konami'];
-        const PILLAR_MULTIPLIER = 1.5;
+        const PILLAR_MULTIPLIER = 2.0;
 
         // v7.0.4: Nintendo franchise IP boost for sanctioned non-Nintendo-published titles.
         // Nintendo has occasionally licensed their most protected IP to outside developers —
@@ -209,7 +209,7 @@
         // in Paradise, etc.) once live, the same way other multipliers in this
         // project get checked against real anchor cases after a scope change.
         const CDI_PLATFORM_ID = 117;
-        const CDI_MULTIPLIER = 60.0;
+        const CDI_MULTIPLIER = 75.0;
 
         // Virtual Boy: Huge marketing spend, Nintendo Power coverage, Blockbuster
         // promotions. A loud expensive failure that every 1995 Nintendo kid knew about.
@@ -238,7 +238,7 @@
         // cultural footprint as the center of congressional hearings and the reason
         // the ESRB exists. Same multiplier as the planned controversy boost.
         const DIGITAL_PICTURES_DEVELOPERS = ['digital pictures'];
-        const DIGITAL_PICTURES_MULTIPLIER = 22.0;
+        const DIGITAL_PICTURES_MULTIPLIER = 25.0;
 
         // v9.11.0: review weighting. The base score is
         //   (userReviews + criticReviews * criticUnits) * REVIEW_WEIGHT + follows + hypes
@@ -271,7 +271,7 @@
             'ea-sports-college-football',
             'pga-tour-2k'
         ];
-        const MAJOR_LEAGUE_MULTIPLIER = 6.5;
+        const MAJOR_LEAGUE_MULTIPLIER = 7.5;
 
         // v5.4.0: Expanded affiliated publisher list covering the full Nintendo and
         // Sony lineages, including second-party and historically close studios.
@@ -884,7 +884,7 @@
         // those early titles would get no Namco treatment at all despite being the
         // literal predecessor studio to Namco's RPG division.
         const NAMCO_DEVELOPERS = ['wolf team'];
-        const NAMCO_MULTIPLIER = 2.5;
+        const NAMCO_MULTIPLIER = 3.75;
 
         // v7.9.7: Sega gets its own tier, on the same terms as Namco — a deep,
         // decades-long partner that was never owned by Sony, but whose relationship
@@ -991,7 +991,7 @@
             'call-of-duty',
             'madden'
         ];
-        const MAINSTREAM_MULTIPLIER = 2.0;
+        const MAINSTREAM_MULTIPLIER = 3.0;
 
         // v8.3.0 EXPERIMENT: Critical Darling rearchitected AGAIN — from a
         // multiplier (flat in v8.1.0, then quadratic-and-stacking in v8.2.0)
