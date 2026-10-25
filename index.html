@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.1</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.2</span>
         </footer>
     </div>
 
@@ -251,9 +251,8 @@
         // that already rank there count toward the total, so naturally strong ones are never
         // displaced. Every Evercade game scoring below the target is raised to it (v9.12.1),
         // engaged ones ahead of zero-engagement ones. Among zero-engagement candidates there is no data to
-        // rank by, so ties break on critic score, then alphabetically. Lifted games tie with
-        // the rank-TARGET game and sort just after it, so they land a few places below
-        // EVERCADE_TARGET_RANK. Set EVERCADE_FLOOR_ENABLED to false to switch it all off.
+        // rank by, so ties break on critic score, then alphabetically. (v9.12.2: lifted games are
+        // staggered, not tied; see EVERCADE_STAGGER_SPACING.) Set EVERCADE_FLOOR_ENABLED to false to switch it all off.
         const EVERCADE_PLATFORM_ID = 309;
         const EVERCADE_FLOOR_ENABLED = true;
         // v9.12.1: Infinity = lift EVERY zero-engagement Evercade title (the catalog is
@@ -264,6 +263,10 @@
         // after the game at this rank, so a full year of ~12 Evercade titles occupies
         // roughly ranks TARGET+1 .. TARGET+12.
         const EVERCADE_TARGET_RANK = 10;
+        // v9.12.2: spacing between staggered Evercade titles. 3 = one Evercade game every
+        // third place (two other games in between); 2 = alternating; 1 = no stagger at all
+        // (back-to-back). With ~12 titles and the defaults they span roughly ranks 11-44.
+        const EVERCADE_STAGGER_SPACING = 3;
         function isEvercadeTitle(game) {
             return !!(game.platforms && game.platforms.includes(EVERCADE_PLATFORM_ID));
         }
@@ -1424,10 +1427,14 @@
             filtered.sort((a, b) => b.hype_score - a.hype_score);
 
             // v9.12.0: Evercade visibility floor (see EVERCADE_FLOOR_ENABLED).
-            // v9.12.1: applies to EVERY Evercade title scoring below the target, not just
-            // zero-engagement ones, so a game with real engagement is never ranked below
-            // one with none. Engaged titles (already in the pool) are raised first and sort
-            // ahead of the zero-engagement ones, which are admitted from outside the pool.
+            // v9.12.1: applies to EVERCADE titles that score below the target, whether or not
+            // they have any engagement, so a game with real engagement is never ranked below
+            // one with none. Engaged titles come first, then zero-engagement ones.
+            // v9.12.2: lifted titles are STAGGERED instead of tied. They are taken out of
+            // the natural ranking and re-inserted one per EVERCADE_STAGGER_SPACING places,
+            // starting just below EVERCADE_TARGET_RANK, so non-Evercade games always sit
+            // between them. Each lifted title shows the score of the game directly above it,
+            // which keeps displayed scores in non-increasing order down the list.
             if (EVERCADE_FLOOR_ENABLED && filtered.length) {
                 const targetIdx = Math.min(EVERCADE_TARGET_RANK, filtered.length) - 1;
                 const targetScore = filtered[targetIdx].hype_score;
@@ -1439,10 +1446,17 @@
                     .sort((a, b) => ((b.aggregatedRating || 0) - (a.aggregatedRating || 0))
                         || String(a.name || '').localeCompare(String(b.name || '')));
                 const chosen = [...weakEngaged, ...zeroEngagement].slice(0, needed);
-                chosen.forEach(game => { game.hype_score = targetScore; });
-                filtered = filtered.concat(chosen.filter(game => !filtered.includes(game)));
-                filtered.sort((a, b) => b.hype_score - a.hype_score);
-                console.info(`[evercade floor] ${chosen.length} lifted to score ${targetScore} (${alreadyUp} Evercade already in top ${targetIdx + 1}; ${weakEngaged.length} engaged + ${zeroEngagement.length} zero-engagement below target)`);
+
+                if (chosen.length) {
+                    const chosenSet = new Set(chosen);
+                    filtered = filtered.filter(game => !chosenSet.has(game));
+                    chosen.forEach((game, i) => {
+                        const pos = Math.min(targetIdx + 1 + (i * EVERCADE_STAGGER_SPACING), filtered.length);
+                        game.hype_score = filtered[Math.max(pos - 1, 0)].hype_score;
+                        filtered.splice(pos, 0, game);
+                    });
+                }
+                console.info(`[evercade floor] ${chosen.length} staggered from rank ${targetIdx + 2}, every ${EVERCADE_STAGGER_SPACING} places (${alreadyUp} Evercade already in top ${targetIdx + 1}; ${weakEngaged.length} engaged + ${zeroEngagement.length} zero-engagement below target)`);
             }
 
             const grid = document.createElement('div');
