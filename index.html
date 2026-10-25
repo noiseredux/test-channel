@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.11.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.0</span>
         </footer>
     </div>
 
@@ -98,7 +98,7 @@
 
         // --- Scoring constants ---
         const GENRE_SPORT_ID = 14;
-        const SPORT_MULTIPLIER = 3.0;
+        const SPORT_MULTIPLIER = 2.5;
         // v7.4.2: Nintendo multiplier recalibrated again to 2.2x Sony's rate
         // (3.75 * 2.2 = 8.25). Rationale: two independent test cases converged on
         // roughly this same ratio — Animal Crossing: New Horizons needing ~2.22x
@@ -130,7 +130,7 @@
         // note above about the Sony bucket holding Apple is obsolete (the Linux
         // landscape-builders still live in the Sony bucket). Nintendo, Sony and
         // Apple lineage boosts all stack independently.
-        const NINTENDO_AFFILIATED_MULTIPLIER = 11.25;
+        const NINTENDO_AFFILIATED_MULTIPLIER = 8.25;
         const SONY_AFFILIATED_MULTIPLIER = 3.75;
         // v9.10.0: Apple/related is its own bucket with its own multiplier. Set equal
         // to Sony's rate (3.75) so that, for any title matching only the Apple list,
@@ -152,7 +152,7 @@
         // strong organic IGDB engagement — this is a philosophical statement rather than
         // a structural data correction.
         const PILLAR_PUBLISHERS = ['square', 'enix', 'capcom', 'konami'];
-        const PILLAR_MULTIPLIER = 2.0;
+        const PILLAR_MULTIPLIER = 1.5;
 
         // v7.0.4: Nintendo franchise IP boost for sanctioned non-Nintendo-published titles.
         // Nintendo has occasionally licensed their most protected IP to outside developers —
@@ -209,7 +209,7 @@
         // in Paradise, etc.) once live, the same way other multipliers in this
         // project get checked against real anchor cases after a scope change.
         const CDI_PLATFORM_ID = 117;
-        const CDI_MULTIPLIER = 75.0;
+        const CDI_MULTIPLIER = 60.0;
 
         // Virtual Boy: Huge marketing spend, Nintendo Power coverage, Blockbuster
         // promotions. A loud expensive failure that every 1995 Nintendo kid knew about.
@@ -238,7 +238,29 @@
         // cultural footprint as the center of congressional hearings and the reason
         // the ESRB exists. Same multiplier as the planned controversy boost.
         const DIGITAL_PICTURES_DEVELOPERS = ['digital pictures'];
-        const DIGITAL_PICTURES_MULTIPLIER = 25.0;
+        const DIGITAL_PICTURES_MULTIPLIER = 22.0;
+
+        // v9.12.0: Evercade visibility floor. Most Evercade games have zero engagement
+        // (no ratings, follows or hypes), so their raw score is 0 and the `raw > 0` filter
+        // drops them; a multiplier can't help, since 0 x anything = 0. Instead, zero-
+        // engagement Evercade titles are admitted AFTER scoring, outside the percentile
+        // pool (so they don't shift anyone else's score), and the strongest few are set to
+        // the final score of the game at EVERCADE_TARGET_RANK. The floor is self-calibrating
+        // per year, so no hand-tuned score magnitude is needed. Each year then has at least
+        // EVERCADE_GUARANTEED_COUNT Evercade games at or above that rank: Evercade games
+        // that already rank there count toward the total, so naturally strong ones are never
+        // displaced. Only games with NO engagement are candidates; Evercade games with any
+        // engagement compete normally. Among zero-engagement candidates there is no data to
+        // rank by, so ties break on critic score, then alphabetically. Lifted games tie with
+        // the rank-TARGET game and sort just after it, so they land a few places below
+        // EVERCADE_TARGET_RANK. Set EVERCADE_FLOOR_ENABLED to false to switch it all off.
+        const EVERCADE_PLATFORM_ID = 309;
+        const EVERCADE_FLOOR_ENABLED = true;
+        const EVERCADE_GUARANTEED_COUNT = 3;
+        const EVERCADE_TARGET_RANK = 15;
+        function isEvercadeTitle(game) {
+            return !!(game.platforms && game.platforms.includes(EVERCADE_PLATFORM_ID));
+        }
 
         // v9.11.0: review weighting. The base score is
         //   (userReviews + criticReviews * criticUnits) * REVIEW_WEIGHT + follows + hypes
@@ -271,7 +293,7 @@
             'ea-sports-college-football',
             'pga-tour-2k'
         ];
-        const MAJOR_LEAGUE_MULTIPLIER = 7.5;
+        const MAJOR_LEAGUE_MULTIPLIER = 6.5;
 
         // v5.4.0: Expanded affiliated publisher list covering the full Nintendo and
         // Sony lineages, including second-party and historically close studios.
@@ -884,7 +906,7 @@
         // those early titles would get no Namco treatment at all despite being the
         // literal predecessor studio to Namco's RPG division.
         const NAMCO_DEVELOPERS = ['wolf team'];
-        const NAMCO_MULTIPLIER = 3.75;
+        const NAMCO_MULTIPLIER = 2.5;
 
         // v7.9.7: Sega gets its own tier, on the same terms as Namco — a deep,
         // decades-long partner that was never owned by Sony, but whose relationship
@@ -991,7 +1013,7 @@
             'call-of-duty',
             'madden'
         ];
-        const MAINSTREAM_MULTIPLIER = 3.0;
+        const MAINSTREAM_MULTIPLIER = 2.0;
 
         // v8.3.0 EXPERIMENT: Critical Darling rearchitected AGAIN — from a
         // multiplier (flat in v8.1.0, then quadratic-and-stacking in v8.2.0)
@@ -1358,6 +1380,12 @@
             // Drop zero/negative-hype games before percentile-ranking, same
             // as the old `hype_score > 0` filter — a game with no engagement
             // at all shouldn't be in the percentile pool skewing the curve.
+            // v9.12.0: set aside zero-engagement Evercade games before the raw > 0 filter
+            // removes them (see EVERCADE_FLOOR_ENABLED).
+            const evercadeCandidates = EVERCADE_FLOOR_ENABLED
+                ? filtered.filter(game => game.hype_score_raw <= 0 && isEvercadeTitle(game))
+                : [];
+
             filtered = filtered.filter(game => game.hype_score_raw > 0);
 
 
@@ -1388,6 +1416,22 @@
             });
 
             filtered.sort((a, b) => b.hype_score - a.hype_score);
+
+            // v9.12.0: Evercade visibility floor (see EVERCADE_FLOOR_ENABLED).
+            if (evercadeCandidates.length) {
+                const targetIdx = Math.min(EVERCADE_TARGET_RANK, filtered.length) - 1;
+                const targetScore = filtered[targetIdx].hype_score;
+                const alreadyUp = filtered.slice(0, targetIdx + 1).filter(isEvercadeTitle).length;
+                const needed = Math.max(0, EVERCADE_GUARANTEED_COUNT - alreadyUp);
+                const chosen = [...evercadeCandidates]
+                    .sort((a, b) => ((b.aggregatedRating || 0) - (a.aggregatedRating || 0))
+                        || String(a.name || '').localeCompare(String(b.name || '')))
+                    .slice(0, needed);
+                chosen.forEach(game => { game.hype_score = targetScore; });
+                filtered = filtered.concat(chosen);
+                filtered.sort((a, b) => b.hype_score - a.hype_score);
+                console.info(`[evercade floor] ${chosen.length} lifted to score ${targetScore} (${alreadyUp} already in top ${targetIdx + 1}, ${evercadeCandidates.length} zero-engagement candidates)`);
+            }
 
             const grid = document.createElement('div');
             grid.className = 'games-grid';
