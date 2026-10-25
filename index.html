@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.1</span>
         </footer>
     </div>
 
@@ -249,15 +249,21 @@
         // per year, so no hand-tuned score magnitude is needed. Each year then has at least
         // EVERCADE_GUARANTEED_COUNT Evercade games at or above that rank: Evercade games
         // that already rank there count toward the total, so naturally strong ones are never
-        // displaced. Only games with NO engagement are candidates; Evercade games with any
-        // engagement compete normally. Among zero-engagement candidates there is no data to
+        // displaced. Every Evercade game scoring below the target is raised to it (v9.12.1),
+        // engaged ones ahead of zero-engagement ones. Among zero-engagement candidates there is no data to
         // rank by, so ties break on critic score, then alphabetically. Lifted games tie with
         // the rank-TARGET game and sort just after it, so they land a few places below
         // EVERCADE_TARGET_RANK. Set EVERCADE_FLOOR_ENABLED to false to switch it all off.
         const EVERCADE_PLATFORM_ID = 309;
         const EVERCADE_FLOOR_ENABLED = true;
-        const EVERCADE_GUARANTEED_COUNT = 3;
-        const EVERCADE_TARGET_RANK = 15;
+        // v9.12.1: Infinity = lift EVERY zero-engagement Evercade title (the catalog is
+        // all niche retro bundles with ~12 releases/year, so it can't flood the list).
+        // Set a number to cap how many Evercade titles per year are guaranteed instead.
+        const EVERCADE_GUARANTEED_COUNT = Infinity;
+        // v9.12.1: raised from 15 to 10. All lifted games share one score and sort just
+        // after the game at this rank, so a full year of ~12 Evercade titles occupies
+        // roughly ranks TARGET+1 .. TARGET+12.
+        const EVERCADE_TARGET_RANK = 10;
         function isEvercadeTitle(game) {
             return !!(game.platforms && game.platforms.includes(EVERCADE_PLATFORM_ID));
         }
@@ -1418,19 +1424,25 @@
             filtered.sort((a, b) => b.hype_score - a.hype_score);
 
             // v9.12.0: Evercade visibility floor (see EVERCADE_FLOOR_ENABLED).
-            if (evercadeCandidates.length) {
+            // v9.12.1: applies to EVERY Evercade title scoring below the target, not just
+            // zero-engagement ones, so a game with real engagement is never ranked below
+            // one with none. Engaged titles (already in the pool) are raised first and sort
+            // ahead of the zero-engagement ones, which are admitted from outside the pool.
+            if (EVERCADE_FLOOR_ENABLED && filtered.length) {
                 const targetIdx = Math.min(EVERCADE_TARGET_RANK, filtered.length) - 1;
                 const targetScore = filtered[targetIdx].hype_score;
                 const alreadyUp = filtered.slice(0, targetIdx + 1).filter(isEvercadeTitle).length;
                 const needed = Math.max(0, EVERCADE_GUARANTEED_COUNT - alreadyUp);
-                const chosen = [...evercadeCandidates]
+                const weakEngaged = filtered
+                    .filter(game => isEvercadeTitle(game) && game.hype_score < targetScore);
+                const zeroEngagement = [...evercadeCandidates]
                     .sort((a, b) => ((b.aggregatedRating || 0) - (a.aggregatedRating || 0))
-                        || String(a.name || '').localeCompare(String(b.name || '')))
-                    .slice(0, needed);
+                        || String(a.name || '').localeCompare(String(b.name || '')));
+                const chosen = [...weakEngaged, ...zeroEngagement].slice(0, needed);
                 chosen.forEach(game => { game.hype_score = targetScore; });
-                filtered = filtered.concat(chosen);
+                filtered = filtered.concat(chosen.filter(game => !filtered.includes(game)));
                 filtered.sort((a, b) => b.hype_score - a.hype_score);
-                console.info(`[evercade floor] ${chosen.length} lifted to score ${targetScore} (${alreadyUp} already in top ${targetIdx + 1}, ${evercadeCandidates.length} zero-engagement candidates)`);
+                console.info(`[evercade floor] ${chosen.length} lifted to score ${targetScore} (${alreadyUp} Evercade already in top ${targetIdx + 1}; ${weakEngaged.length} engaged + ${zeroEngagement.length} zero-engagement below target)`);
             }
 
             const grid = document.createElement('div');
