@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.2</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.12.7</span>
         </footer>
     </div>
 
@@ -259,13 +259,13 @@
         // all niche retro bundles with ~12 releases/year, so it can't flood the list).
         // Set a number to cap how many Evercade titles per year are guaranteed instead.
         const EVERCADE_GUARANTEED_COUNT = Infinity;
-        // v9.12.1: raised from 15 to 10. All lifted games share one score and sort just
-        // after the game at this rank, so a full year of ~12 Evercade titles occupies
-        // roughly ranks TARGET+1 .. TARGET+12.
-        const EVERCADE_TARGET_RANK = 10;
+        // v9.12.4: lowered to 5 (was 15, then 10) so lifted Evercade titles start higher.
+        // The FIRST lifted title is placed at rank TARGET+1 = #6; the rest follow every
+        // EVERCADE_STAGGER_SPACING places below it.
+        const EVERCADE_TARGET_RANK = 5;
         // v9.12.2: spacing between staggered Evercade titles. 3 = one Evercade game every
         // third place (two other games in between); 2 = alternating; 1 = no stagger at all
-        // (back-to-back). With ~12 titles and the defaults they span roughly ranks 11-44.
+        // (back-to-back). With ~12 titles and the defaults they span roughly ranks 6-39.
         const EVERCADE_STAGGER_SPACING = 3;
         function isEvercadeTitle(game) {
             return !!(game.platforms && game.platforms.includes(EVERCADE_PLATFORM_ID));
@@ -917,6 +917,29 @@
         const NAMCO_DEVELOPERS = ['wolf team'];
         const NAMCO_MULTIPLIER = 2.5;
 
+        // v9.12.5: extra nudge for the Namco series that defined the PS1 era, i.e. series
+        // with 3+ entries published on the console: Ace Combat, Tekken, Tales of, Ridge
+        // Racer, Namco Museum (Vols. 1-5) and Point Blank (1-3), plus Pac-Man and
+        // Smash Court (v9.12.6). Matched on slug fragments,
+        // like NINTENDO_IP_SLUGS, but ONLY for titles that already pass isNamcoTitle(), so
+        // unrelated games sharing a fragment (e.g. "Tales of Monkey Island") are not
+        // caught. It STACKS on top of NAMCO_MULTIPLIER: 2.5 x 1.5 = 3.75, which lands the
+        // whole series at Sony's own affiliated rate. Applies to every entry in these
+        // series regardless of year or platform, same as the Nintendo IP list.
+        const NAMCO_PS1_SERIES_SLUGS = [
+            'ace-combat',
+            'tekken',
+            'tales-of',
+            'ridge-racer',
+            'namco-museum',
+            'point-blank',
+            // v9.12.6: added Pac-Man and Smash Court. (Time Crisis was added then removed in
+            // v9.12.7: only 2 PS1 releases, below the 3+ bar.)
+            'pac-man',        // also matches Ms. Pac-Man; does NOT match Pac-Attack/Pac-Mania/Pac-Land
+            'smash-court'     // Smash Court Tennis 1-3 incl. Anna Kournikova's (slug contains it)
+        ];
+        const NAMCO_PS1_SERIES_MULTIPLIER = 1.5;
+
         // v7.9.7: Sega gets its own tier, on the same terms as Namco — a deep,
         // decades-long partner that was never owned by Sony, but whose relationship
         // with Sony specifically (not Nintendo) went well beyond typical third-party
@@ -1159,6 +1182,10 @@
             return publisherMatch || developerMatch;
         }
 
+        function isNamcoPs1Series(game) {
+            if (!game.slug || !isNamcoTitle(game)) return false;
+            return NAMCO_PS1_SERIES_SLUGS.some(s => game.slug.includes(s));
+        }
         // v7.9.7: Sega/Atlus check, same shape as isNamcoTitle — standalone tier,
         // never folded into the Sony affiliated lists. See rationale on
         // SEGA_PUBLISHERS above.
@@ -1320,6 +1347,9 @@
             if (isNamcoTitle(game)) {
                 boost(NAMCO_MULTIPLIER);
             }
+            if (isNamcoPs1Series(game)) {
+                boost(NAMCO_PS1_SERIES_MULTIPLIER);
+            }
             if (isSegaTitle(game)) {
                 boost(SEGA_MULTIPLIER);
             }
@@ -1429,7 +1459,7 @@
             // v9.12.0: Evercade visibility floor (see EVERCADE_FLOOR_ENABLED).
             // v9.12.1: applies to EVERCADE titles that score below the target, whether or not
             // they have any engagement, so a game with real engagement is never ranked below
-            // one with none. Engaged titles come first, then zero-engagement ones.
+            // one with none. Engaged titles come first, then zero-engagement ones (ordered by critic score, then newest release date; see v9.12.7).
             // v9.12.2: lifted titles are STAGGERED instead of tied. They are taken out of
             // the natural ranking and re-inserted one per EVERCADE_STAGGER_SPACING places,
             // starting just below EVERCADE_TARGET_RANK, so non-Evercade games always sit
@@ -1442,8 +1472,16 @@
                 const needed = Math.max(0, EVERCADE_GUARANTEED_COUNT - alreadyUp);
                 const weakEngaged = filtered
                     .filter(game => isEvercadeTitle(game) && game.hype_score < targetScore);
+                // v9.12.3: order zero-engagement titles by critic score (when one exists),
+                // then release date, then name only as a last-resort tie-break; cartridge-
+                // mates released on the same day share a date. v9.12.7: NEWEST first (the
+                // latest release of the year ranks highest; was oldest-first). Undated
+                // titles sort last. Needs backend v5.5.6+ for releaseDate; without it,
+                // dates are missing and ordering falls back to name.
+                const releaseKey = game => (game.releaseDate > 0 ? game.releaseDate : 0);
                 const zeroEngagement = [...evercadeCandidates]
                     .sort((a, b) => ((b.aggregatedRating || 0) - (a.aggregatedRating || 0))
+                        || (releaseKey(b) - releaseKey(a))
                         || String(a.name || '').localeCompare(String(b.name || '')));
                 const chosen = [...weakEngaged, ...zeroEngagement].slice(0, needed);
 
