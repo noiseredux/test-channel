@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.14.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.14.1</span>
         </footer>
     </div>
 
@@ -1020,10 +1020,17 @@
         // years are untouched. Older strengths/phantoms are first-pass guesses to tune.
         // List newest first; the first phase whose fromYear <= the year wins.
         const ERA_PHASES = [
-            { name: '2012-present', fromYear: 2012, strength: 1.0,  phantomReviews: NAMCO_PS1_SERIES_PHANTOM_REVIEWS },
-            { name: '2005-2011',    fromYear: 2005, strength: 1.15, phantomReviews: 175 },
-            { name: '1977-2004',    fromYear: 0,    strength: 1.3,  phantomReviews: 200 }
+            { name: '2012-present', fromYear: 2012, strength: 1.0,  phantomReviews: NAMCO_PS1_SERIES_PHANTOM_REVIEWS, namcoSeriesMultiplier: NAMCO_PS1_SERIES_MULTIPLIER },
+            { name: '2005-2011',    fromYear: 2005, strength: 1.15, phantomReviews: 175, namcoSeriesMultiplier: 2.5 },
+            { name: '1977-2004',    fromYear: 0,    strength: 1.3,  phantomReviews: 200, namcoSeriesMultiplier: 3.0 }
         ];
+        // v9.14.1: namcoSeriesMultiplier is the Namco PS1-series nudge for that phase (before
+        // the strength exponent). The strength exponent lifts every boosted game together, so
+        // it leaves the order among boosted games almost unchanged (Tales of Phantasia sat at
+        // #26 in 1995 both before and after v9.14.0). Raising the series nudge in older
+        // phases is what moves the Namco series relative to its boosted peers. First pass:
+        // 2.0 / 2.5 / 3.0, which keeps the old-era series stack (~13.8x) just under
+        // Nintendo-affiliated (~15.5x).
         function eraPhaseForYear(year) {
             if (!Number.isFinite(year)) return ERA_PHASES[0];
             return ERA_PHASES.find(phase => year >= phase.fromYear) || ERA_PHASES[0];
@@ -1440,7 +1447,7 @@
         // per-step rounding are unchanged. The Merit Badge is deliberately NOT part of
         // this chain or of the "boosted" test: it is critic-driven, so counting it would
         // double-dip on the critic weighting.
-        function applyAffiliationBoosts(game, startScore, strength = 1) {
+        function applyAffiliationBoosts(game, startScore, strength = 1, namcoSeriesMultiplier = NAMCO_PS1_SERIES_MULTIPLIER) {
             let score = startScore;
             let boosted = false;
             const boost = (multiplier) => {
@@ -1473,7 +1480,7 @@
                 boost(NAMCO_MULTIPLIER);
             }
             if (isNamcoPs1Series(game)) {
-                boost(NAMCO_PS1_SERIES_MULTIPLIER);
+                boost(namcoSeriesMultiplier);
             }
             if (isSegaTitle(game)) {
                 boost(SEGA_MULTIPLIER);
@@ -1522,13 +1529,13 @@
             // Digital Pictures/Merit Badge) still applies unchanged.
             // v9.14.0: era phase for the selected year (see ERA_PHASES).
             const eraPhase = eraPhaseForYear(year);
-            console.info(`[era phase] ${year}: ${eraPhase.name}, boost strength ${eraPhase.strength}, phantom reviews ${eraPhase.phantomReviews}`);
+            console.info(`[era phase] ${year}: ${eraPhase.name}, boost strength ${eraPhase.strength}, phantom reviews ${eraPhase.phantomReviews}, Namco series x${eraPhase.namcoSeriesMultiplier}`);
             filtered.forEach(game => {
                 let score;
 
                 // v9.11.0: critic/user review weighting (see REVIEW_WEIGHT below). The
                 // probe call only determines whether any boost applies to this game.
-                const probe = applyAffiliationBoosts(game, 1, eraPhase.strength);
+                const probe = applyAffiliationBoosts(game, 1, eraPhase.strength, eraPhase.namcoSeriesMultiplier);
                 let reviewUnits;
                 if (game.criticReviews !== undefined) {
                     const criticUnits = probe.boosted
@@ -1544,7 +1551,7 @@
                     reviewUnits += eraPhase.phantomReviews;
                 }
                 score = (reviewUnits * REVIEW_WEIGHT) + (game.follows || 0) + (game.hypes || 0);
-                score = applyAffiliationBoosts(game, score, eraPhase.strength).score;
+                score = applyAffiliationBoosts(game, score, eraPhase.strength, eraPhase.namcoSeriesMultiplier).score;
                 if ((game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
                     score = Math.round(score * MERIT_BADGE_MULTIPLIER);
                 }
