@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.14.3</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 9.15.0</span>
         </footer>
     </div>
 
@@ -93,8 +93,9 @@
 
         // v9.10.1: added Intellivision (67, INT), Vectrex (70, VTX), Arcadia 2001
         // (473, 2001) and Evercade (309, EC). IDs per IGDB's platform table.
-        const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35, 3, 67, 70, 473, 309];
-        const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG', 3: 'LNX', 67: 'INT', 70: 'VTX', 473: '2001', 309: 'EC', 6: 'STM' };
+        // v9.15.0: added Polymega (509, PM). Zero-engagement like Evercade; see POLYMEGA_*.
+        const ALLOWED_PLATFORMS = [75, 14, 39, 18, 99, 19, 58, 4, 21, 5, 41, 130, 508, 33, 22, 24, 20, 37, 27, 53, 59, 68, 117, 78, 57, 123, 87, 7, 8, 9, 48, 167, 165, 38, 46, 51, 77, 121, 306, 86, 150, 29, 30, 64, 35, 3, 67, 70, 473, 309, 509];
+        const PLATFORM_NAMES = { 75: 'A2', 14: 'Mac', 39: 'iOS', 18: 'NES', 99: 'FC', 19: 'SNES', 58: 'SFC', 4: 'N64', 21: 'GC', 5: 'Wii', 41: 'WiiU', 130: 'NS', 508: 'NS2', 33: 'GB', 22: 'GBC', 24: 'GBA', 20: 'DS', 37: '3DS', 27: 'MSX', 53: 'MSX2', 59: '2600', 68: 'CV', 117: 'CDi', 78: 'SCD', 57: 'WS', 123: 'WSC', 87: 'VB', 7: 'PS1', 8: 'PS2', 9: 'PS3', 48: 'PS4', 167: 'PS5', 165: 'PSVR', 38: 'PSP', 46: 'PSV', 51: 'FDS', 77: 'X1', 121: 'X68k', 306: 'SV', 86: 'TG16', 150: 'TGCD', 29: 'SG', 30: '32X', 64: 'SMS', 35: 'GG', 3: 'LNX', 67: 'INT', 70: 'VTX', 473: '2001', 309: 'EC', 509: 'PM', 6: 'STM' };
 
         // --- Scoring constants ---
         const GENRE_SPORT_ID = 14;
@@ -271,6 +272,58 @@
         const EVERCADE_STAGGER_SPACING = 3;
         function isEvercadeTitle(game) {
             return !!(game.platforms && game.platforms.includes(EVERCADE_PLATFORM_ID));
+        }
+
+        // v9.15.0: POLYMEGA visibility floor. Polymega's IGDB entries are "Polymega Collection
+        // Vol. N" releases (from late 2024) with no ratings, the same zero-engagement problem as
+        // Evercade, so it gets the same treatment through the same function
+        // (liftPlatformTitles below): zero-engagement Polymega titles are admitted after
+        // scoring and placed one per POLYMEGA_STAGGER_SPACING places, the first at rank
+        // POLYMEGA_TARGET_RANK + 1 = #8, the rest staggered below it. Engaged titles that score
+        // under the target are raised first. Runs right AFTER the Evercade floor (Evercade's
+        // first slot is #6) and BEFORE the Zeitgeist floor, so Polymega's #8 is exact and any
+        // Evercade titles below it shift down one place. POLYMEGA_PLATFORM_ID is IGDB's
+        // platform ID for Polymega. Set POLYMEGA_FLOOR_ENABLED to false to switch it off.
+        const POLYMEGA_PLATFORM_ID = 509;
+        const POLYMEGA_FLOOR_ENABLED = true;
+        const POLYMEGA_GUARANTEED_COUNT = Infinity;
+        const POLYMEGA_TARGET_RANK = 7;
+        const POLYMEGA_STAGGER_SPACING = 3;
+        function isPolymegaTitle(game) {
+            return !!(game.platforms && game.platforms.includes(POLYMEGA_PLATFORM_ID));
+        }
+
+        // v9.15.0: the Evercade lift, extracted so Evercade and Polymega share one set of
+        // rules (the Evercade behavior is unchanged). `list` must already be sorted by score;
+        // returns the new list. opts: label, isTitle, candidates (zero-engagement titles set
+        // aside before the raw > 0 filter), targetRank, spacing, guaranteedCount.
+        function liftPlatformTitles(list, opts) {
+            if (!list.length) return list;
+            const targetIdx = Math.min(opts.targetRank, list.length) - 1;
+            const targetScore = list[targetIdx].hype_score;
+            const alreadyUp = list.slice(0, targetIdx + 1).filter(opts.isTitle).length;
+            const needed = Math.max(0, opts.guaranteedCount - alreadyUp);
+            const weakEngaged = list.filter(game => opts.isTitle(game) && game.hype_score < targetScore);
+            // Zero-engagement titles: critic score (when one exists), then NEWEST release
+            // date first (undated last), then name as a last-resort tie-break.
+            const releaseKey = game => (game.releaseDate > 0 ? game.releaseDate : 0);
+            const zeroEngagement = [...opts.candidates]
+                .sort((a, b) => ((b.aggregatedRating || 0) - (a.aggregatedRating || 0))
+                    || (releaseKey(b) - releaseKey(a))
+                    || String(a.name || '').localeCompare(String(b.name || '')));
+            const chosen = [...weakEngaged, ...zeroEngagement].slice(0, needed);
+            let out = list;
+            if (chosen.length) {
+                const chosenSet = new Set(chosen);
+                out = list.filter(game => !chosenSet.has(game));
+                chosen.forEach((game, i) => {
+                    const pos = Math.min(targetIdx + 1 + (i * opts.spacing), out.length);
+                    game.hype_score = out[Math.max(pos - 1, 0)].hype_score;
+                    out.splice(pos, 0, game);
+                });
+            }
+            console.info(`[${opts.label.toLowerCase()} floor] ${chosen.length} staggered from rank ${targetIdx + 2}, every ${opts.spacing} places (${alreadyUp} ${opts.label} already in top ${targetIdx + 1}; ${weakEngaged.length} engaged + ${zeroEngagement.length} zero-engagement below target)`);
+            return out;
         }
 
         // v9.12.8: Evercade hardware bundles (not games) were slipping through the Evercade
@@ -1590,6 +1643,10 @@
             const evercadeCandidates = EVERCADE_FLOOR_ENABLED
                 ? filtered.filter(game => game.hype_score_raw <= 0 && isEvercadeTitle(game))
                 : [];
+            // v9.15.0: same for zero-engagement Polymega games.
+            const polymegaCandidates = POLYMEGA_FLOOR_ENABLED
+                ? filtered.filter(game => game.hype_score_raw <= 0 && isPolymegaTitle(game))
+                : [];
 
             filtered = filtered.filter(game => game.hype_score_raw > 0);
 
@@ -1631,36 +1688,22 @@
             // starting just below EVERCADE_TARGET_RANK, so non-Evercade games always sit
             // between them. Each lifted title shows the score of the game directly above it,
             // which keeps displayed scores in non-increasing order down the list.
-            if (EVERCADE_FLOOR_ENABLED && filtered.length) {
-                const targetIdx = Math.min(EVERCADE_TARGET_RANK, filtered.length) - 1;
-                const targetScore = filtered[targetIdx].hype_score;
-                const alreadyUp = filtered.slice(0, targetIdx + 1).filter(isEvercadeTitle).length;
-                const needed = Math.max(0, EVERCADE_GUARANTEED_COUNT - alreadyUp);
-                const weakEngaged = filtered
-                    .filter(game => isEvercadeTitle(game) && game.hype_score < targetScore);
-                // v9.12.3: order zero-engagement titles by critic score (when one exists),
-                // then release date, then name only as a last-resort tie-break; cartridge-
-                // mates released on the same day share a date. v9.12.7: NEWEST first (the
-                // latest release of the year ranks highest; was oldest-first). Undated
-                // titles sort last. Needs backend v5.5.6+ for releaseDate; without it,
-                // dates are missing and ordering falls back to name.
-                const releaseKey = game => (game.releaseDate > 0 ? game.releaseDate : 0);
-                const zeroEngagement = [...evercadeCandidates]
-                    .sort((a, b) => ((b.aggregatedRating || 0) - (a.aggregatedRating || 0))
-                        || (releaseKey(b) - releaseKey(a))
-                        || String(a.name || '').localeCompare(String(b.name || '')));
-                const chosen = [...weakEngaged, ...zeroEngagement].slice(0, needed);
+            if (EVERCADE_FLOOR_ENABLED) {
+                filtered = liftPlatformTitles(filtered, {
+                    label: 'Evercade', isTitle: isEvercadeTitle, candidates: evercadeCandidates,
+                    targetRank: EVERCADE_TARGET_RANK, spacing: EVERCADE_STAGGER_SPACING,
+                    guaranteedCount: EVERCADE_GUARANTEED_COUNT
+                });
+            }
 
-                if (chosen.length) {
-                    const chosenSet = new Set(chosen);
-                    filtered = filtered.filter(game => !chosenSet.has(game));
-                    chosen.forEach((game, i) => {
-                        const pos = Math.min(targetIdx + 1 + (i * EVERCADE_STAGGER_SPACING), filtered.length);
-                        game.hype_score = filtered[Math.max(pos - 1, 0)].hype_score;
-                        filtered.splice(pos, 0, game);
-                    });
-                }
-                console.info(`[evercade floor] ${chosen.length} staggered from rank ${targetIdx + 2}, every ${EVERCADE_STAGGER_SPACING} places (${alreadyUp} Evercade already in top ${targetIdx + 1}; ${weakEngaged.length} engaged + ${zeroEngagement.length} zero-engagement below target)`);
+            // v9.15.0: Polymega visibility floor (see POLYMEGA_FLOOR_ENABLED). Applied after
+            // Evercade so its first slot (#8) is exact.
+            if (POLYMEGA_FLOOR_ENABLED) {
+                filtered = liftPlatformTitles(filtered, {
+                    label: 'Polymega', isTitle: isPolymegaTitle, candidates: polymegaCandidates,
+                    targetRank: POLYMEGA_TARGET_RANK, spacing: POLYMEGA_STAGGER_SPACING,
+                    guaranteedCount: POLYMEGA_GUARANTEED_COUNT
+                });
             }
 
             // v9.13.0: Zeitgeist floor (see ZEITGEIST_FLOOR_ENABLED).
