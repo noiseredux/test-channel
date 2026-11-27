@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 10.0.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 10.1.0</span>
         </footer>
     </div>
 
@@ -1334,20 +1334,25 @@
 
         // v10.0.0: CURATED LIST. A CSV hosted on GitHub lists Metacritic "must plays" (90+) and
         // Video Game Award winners by IGDB game ID. Every game on it is credited with phantom
-        // user reviews, added to the review count BEFORE the x3 review weight and the whole
+        // USER reviews AND phantom CRITIC reviews (100 + 7: Metacritic requires 7 critic
+        // reviews before a game appears in its best-of lists). Critics are weighted like real
+        // critic reviews (x10 boosted / x20 unboosted), so 7 critics = 70-140 review units.
+        // Both are added to the review count BEFORE the x3 review weight and the whole
         // boost chain (same mechanism as the Namco PS1-series phantom reviews), so the lift
         // compounds with affiliation boosts the way Namco's does. Add a game = add a row to the
         // CSV; the HTML never changes.
         //   - Only the `id` column is required (header matched by name, any column order).
-        //   - Optional `phantom_reviews` column overrides the default for a single row.
-        //   - Duplicate ids are fine; the largest value wins.
+        //   - Optional `phantom_reviews` (users) and `phantom_critics` columns override the
+        //     defaults for a single row; a blank cell uses the default.
+        //   - Duplicate ids are fine; the largest value in each field wins.
         //   - Curated games still have to pass the normal platform allowlist / Steam gate and
         //     the category blacklist; the CSV only boosts, it never admits.
         //   - A curated game does NOT count as "boosted" for the critic-review weighting.
         //   - If the CSV can't be fetched, the page logs a warning and scores without it.
         const CURATED_CSV_URL = 'https://raw.githubusercontent.com/noiseredux/whatshouldnoisereduxplay/main/want-to-play.csv';
-        const CURATED_PHANTOM_REVIEWS = 100;
-        let curatedMap = new Map();   // IGDB game id -> phantom review count
+        const CURATED_PHANTOM_USERS = 100;
+        const CURATED_PHANTOM_CRITICS = 7;
+        let curatedMap = new Map();   // IGDB game id -> { users, critics } phantom counts
         let curatedPromise = null;
 
         // Minimal RFC 4180 parser: handles quoted fields, commas and newlines inside quotes,
@@ -1383,14 +1388,21 @@
             const header = rows.shift().map(h => h.trim().toLowerCase());
             const idCol = header.indexOf('id');
             if (idCol < 0) throw new Error('CSV has no "id" column');
-            const boostCol = header.indexOf('phantom_reviews');
+            const usersCol = header.indexOf('phantom_reviews');
+            const criticsCol = header.indexOf('phantom_critics');
+            const readCount = (r, col, fallback) => {
+                const n = col >= 0 ? parseInt(r[col], 10) : NaN;
+                return Number.isFinite(n) && n >= 0 ? n : fallback;
+            };
             const map = new Map();
             rows.forEach(r => {
                 const id = parseInt(r[idCol], 10);
                 if (!Number.isFinite(id)) return;
-                const custom = boostCol >= 0 ? parseInt(r[boostCol], 10) : NaN;
-                const value = Number.isFinite(custom) && custom >= 0 ? custom : CURATED_PHANTOM_REVIEWS;
-                map.set(id, Math.max(map.get(id) || 0, value));
+                const prev = map.get(id) || { users: 0, critics: 0 };
+                map.set(id, {
+                    users: Math.max(prev.users, readCount(r, usersCol, CURATED_PHANTOM_USERS)),
+                    critics: Math.max(prev.critics, readCount(r, criticsCol, CURATED_PHANTOM_CRITICS))
+                });
             });
             return map;
         }
@@ -1832,9 +1844,12 @@
                     reviewUnits += eraPhase.phantomReviews;
                 }
                 // v10.0.0: curated-list phantom reviews (see CURATED_CSV_URL).
-                const curatedReviews = curatedMap.get(game.id);
-                if (curatedReviews) {
-                    reviewUnits += curatedReviews;
+                const curated = curatedMap.get(game.id);
+                if (curated) {
+                    const curatedCriticUnits = probe.boosted
+                        ? CRITIC_REVIEW_EQUIVALENT
+                        : UNBOOSTED_CRITIC_REVIEW_EQUIVALENT;
+                    reviewUnits += curated.users + (curated.critics * curatedCriticUnits);
                 }
                 score = (reviewUnits * REVIEW_WEIGHT) + (game.follows || 0) + (game.hypes || 0);
                 score = applyAffiliationBoosts(game, score, eraPhase.strength, eraPhase.namcoSeriesMultiplier).score;
