@@ -46,7 +46,7 @@
         <footer>
             Built by noiseredux &nbsp;·&nbsp; Data powered by IGDB <br>
             A personal index for Sony, Nintendo, and Apple collectors — through the lens of a lifelong fanboy. <br>
-            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 10.1.0</span>
+            <span style="font-size:0.7rem; letter-spacing:0.2em; opacity:0.7;">Version 10.2.0</span>
         </footer>
     </div>
 
@@ -270,9 +270,10 @@
         // Set a number to cap how many Evercade titles per year are guaranteed instead.
         const EVERCADE_GUARANTEED_COUNT = Infinity;
         // v9.12.4: lowered to 5 (was 15, then 10) so lifted Evercade titles start higher.
-        // The FIRST lifted title is placed at rank TARGET+1 = #6; the rest follow every
+        // The FIRST lifted title is placed at rank TARGET+1; the rest follow every
         // EVERCADE_STAGGER_SPACING places below it.
-        const EVERCADE_TARGET_RANK = 5;
+        // v10.2.0: raised 5 -> 7, so the first Evercade slot moves from #6 to #8.
+        const EVERCADE_TARGET_RANK = 7;
         // v9.12.2: spacing between staggered Evercade titles. 3 = one Evercade game every
         // third place (two other games in between); 2 = alternating; 1 = no stagger at all
         // (back-to-back). With ~12 titles and the defaults they span roughly ranks 6-39.
@@ -286,15 +287,16 @@
         // Evercade, so it gets the same treatment through the same function
         // (liftPlatformTitles below): zero-engagement Polymega titles are admitted after
         // scoring and placed one per POLYMEGA_STAGGER_SPACING places, the first at rank
-        // POLYMEGA_TARGET_RANK + 1 = #8, the rest staggered below it. Engaged titles that score
+        // POLYMEGA_TARGET_RANK + 1 = #13, the rest staggered below it. Engaged titles that score
         // under the target are raised first. Runs right AFTER the Evercade floor (Evercade's
-        // first slot is #6) and BEFORE the Zeitgeist floor, so Polymega's #8 is exact and any
+        // first slot is #8) and BEFORE the Zeitgeist floor, so Polymega's #13 is exact and any
         // Evercade titles below it shift down one place. POLYMEGA_PLATFORM_ID is IGDB's
         // platform ID for Polymega. Set POLYMEGA_FLOOR_ENABLED to false to switch it off.
         const POLYMEGA_PLATFORM_ID = 509;
         const POLYMEGA_FLOOR_ENABLED = true;
         const POLYMEGA_GUARANTEED_COUNT = Infinity;
-        const POLYMEGA_TARGET_RANK = 7;
+        // v10.2.0: raised 7 -> 12, so the first Polymega slot moves from #8 to #13.
+        const POLYMEGA_TARGET_RANK = 12;
         const POLYMEGA_STAGGER_SPACING = 3;
         function isPolymegaTitle(game) {
             return !!(game.platforms && game.platforms.includes(POLYMEGA_PLATFORM_ID));
@@ -1352,6 +1354,10 @@
         const CURATED_CSV_URL = 'https://raw.githubusercontent.com/noiseredux/whatshouldnoisereduxplay/main/want-to-play.csv';
         const CURATED_PHANTOM_USERS = 100;
         const CURATED_PHANTOM_CRITICS = 7;
+        // v10.2.0: curated games ALSO get a final x2 on their score, applied LAST, after the
+        // review weighting, the whole affiliation boost chain and the Merit Badge. Flat: it is
+        // not raised to the era-phase exponent. Set to 1 to switch it off.
+        const CURATED_SCORE_MULTIPLIER = 2.0;
         let curatedMap = new Map();   // IGDB game id -> { users, critics } phantom counts
         let curatedPromise = null;
 
@@ -1856,6 +1862,10 @@
                 if ((game.aggregatedRating || 0) >= MERIT_BADGE_THRESHOLD) {
                     score = Math.round(score * MERIT_BADGE_MULTIPLIER);
                 }
+                // v10.2.0: curated-list score multiplier, applied after everything else.
+                if (curated) {
+                    score = Math.round(score * CURATED_SCORE_MULTIPLIER);
+                }
 
                 game.hype_score_raw = score;
             });
@@ -1922,7 +1932,7 @@
             }
 
             // v9.15.0: Polymega visibility floor (see POLYMEGA_FLOOR_ENABLED). Applied after
-            // Evercade so its first slot (#8) is exact.
+            // Evercade so its first slot (#13) is exact.
             if (POLYMEGA_FLOOR_ENABLED) {
                 filtered = liftPlatformTitles(filtered, {
                     label: 'Polymega', isTitle: isPolymegaTitle, candidates: polymegaCandidates,
